@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# StringTune - Test Script
+# Nobs Tuner - Test Script
 # Runs the test suites, and can check the toolchain before you start
 
 set -e
@@ -18,7 +18,7 @@ APP_ID=$(grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts)
 AUDIO_DIR="app/src/test/resources/realaudio"
 
 echo -e "${BLUE}=====================================${NC}"
-echo -e "${BLUE}StringTune - Test Script${NC}"
+echo -e "${BLUE}Nobs Tuner - Test Script${NC}"
 echo -e "${BLUE}=====================================${NC}"
 echo ""
 

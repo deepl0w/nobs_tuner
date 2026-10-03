@@ -1,12 +1,12 @@
-# Publishing StringTune to Google Play
+# Publishing Nobs Tuner to Google Play
 
 ## 0. Before the first upload
 
 Two things are permanent once an app is published, so change them first:
 
 1. **`applicationId`** in `app/build.gradle.kts`. It currently reads
-   `io.github.deeplow.stringtune`, which is a placeholder. Use a domain you
-   control, or `io.github.<your-github-username>.stringtune`.
+   `io.github.deeplow.nobstuner`, which is a placeholder. Use a domain you
+   control, or `io.github.<your-github-username>.nobstuner`.
 2. **The upload key** (below). If you lose it you can ask Google to reset it, but
    it is a slow process — back it up somewhere durable.
 
@@ -95,7 +95,7 @@ Suggested text:
 
 **Full description**
 
-> StringTune is a precise, no-nonsense tuner for string instruments.
+> Nobs Tuner is a precise, no-nonsense tuner for string instruments.
 >
 > • 60+ built-in tunings — guitar (6, 7 and 8 string), bass, ukulele, banjo,
 >   mandolin, violin, viola, cello, double bass, bouzouki, resonator, lap steel

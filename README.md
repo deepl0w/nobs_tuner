@@ -1,4 +1,4 @@
-# StringTune
+# Nobs Tuner
 
 A chromatic and preset-based tuner for string instruments, built for Android with
 Kotlin and Jetpack Compose. Everything happens on the device: no network access,
@@ -118,7 +118,7 @@ microphone, keeping up with the stream, and releasing it cleanly:
 
 See [docs/PLAY_STORE.md](docs/PLAY_STORE.md) for signing, the release checklist
 and the Data safety answers. **Before your first upload, change `applicationId`
-in `app/build.gradle.kts`** — `io.github.deeplow.stringtune` is a placeholder and
+in `app/build.gradle.kts`** — `io.github.deeplow.nobstuner` is a placeholder and
 the ID is permanent once published.
 
 ## Licence

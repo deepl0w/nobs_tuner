@@ -20,3 +20,6 @@ captures/
 
 # Downloaded test recordings (see tools/fetch-test-audio.sh)
 app/src/test/resources/realaudio/
+
+# Claude Code session state
+.claude/
