@@ -30,12 +30,12 @@ the first term is constant, the second is a sliding window sum updated in O(1),
 and the third is a cross-correlation obtained from one complex multiply between
 two FFTs. That is three transforms per frame instead of a quadratic scan. The
 FFT is ours — an iterative radix-2 Cooley–Tukey in
-[`Fft`](../../app/src/main/java/io/github/deeplow/nobstuner/audio/Fft.kt) — with
+[`Fft`](../../core/src/commonMain/kotlin/io/github/deeplow/nobstuner/audio/Fft.kt) — with
 twiddle factors and the bit-reversal permutation precomputed, so a transform
 allocates nothing.
 
 Layer a second step on top of textbook YIN: an **octave correction** in
-[`PitchDetector.preferTrueFundamental()`](../../app/src/main/java/io/github/deeplow/nobstuner/audio/PitchDetector.kt).
+[`PitchDetector.preferTrueFundamental()`](../../core/src/commonMain/kotlin/io/github/deeplow/nobstuner/audio/PitchDetector.kt).
 YIN takes the first lag whose normalised difference dips below its threshold,
 which on a weak fundamental is half the true period, and the note then reads an
 octave high. The correction compares the candidate against its multiples and

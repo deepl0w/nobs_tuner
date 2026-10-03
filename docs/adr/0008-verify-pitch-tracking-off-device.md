@@ -32,7 +32,7 @@ Verify the pitch chain **off-device**, by pushing real instrument recordings
 through the identical code path the microphone uses, and verify only the
 recorder itself on-device.
 
-[`RealRecordingPitchTest`](../../app/src/test/java/io/github/deeplow/nobstuner/audio/RealRecordingPitchTest.kt)
+[`RealRecordingPitchTest`](../../core/src/jvmTest/kotlin/io/github/deeplow/nobstuner/audio/RealRecordingPitchTest.kt)
 streams whole recordings through `HighPassFilter`, `PitchDetector` and
 `PitchSmoother` at `AudioEngine.FRAME_SIZE` and `AudioEngine.HOP_SIZE` —
 referencing those constants, not copies of them, so the test cannot drift from

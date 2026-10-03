@@ -1,0 +1,97 @@
+name: Web app
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Kotlin/JS is configured to use the Node and Yarn already on the PATH
+      # rather than downloading its own, because settings.gradle.kts refuses
+      # repositories the build adds to itself. See core/build.gradle.kts.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: corepack enable || npm install --global yarn
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The same pitch suite the Android build runs, against the JavaScript
+      # compilation of the same sources. A divergence between the two platforms
+      # fails here rather than reaching a user's instrument.
+      - name: Shared core tests on Node
+        run: ./gradlew :core:jsNodeTest
+
+      - name: Compile the core for the browser
+        run: ./gradlew :core:syncWebCore
+
+      # Stamp the version into the About screen and, more importantly, into the
+      # service worker's cache name: without a change there a returning visitor
+      # would be served the previous release's shell indefinitely.
+      - name: Stamp the version
+        run: |
+          version=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          stamp="$version+${GITHUB_SHA::7}"
+          echo "Stamping $stamp"
+          sed -i "s/APP_VERSION = '.*'/APP_VERSION = '$stamp'/" web/src/version.js
+          sed -i "s/CACHE_VERSION = '.*'/CACHE_VERSION = '$stamp'/" web/sw.js
+          grep -h "APP_VERSION\|CACHE_VERSION" web/src/version.js web/sw.js
+
+      - name: Check the site is complete
+        run: |
+          set -e
+          for required in index.html styles.css manifest.webmanifest sw.js \
+                          src/main.js vendor/NobsTuner-core.mjs \
+                          icons/icon-192.png icons/icon-512.png icons/maskable-512.png; do
+            test -f "web/$required" || { echo "missing web/$required"; exit 1; }
+          done
+          # Every file the service worker precaches by name must exist, or the
+          # app silently loses offline support for it.
+          node --input-type=module -e "
+            const sw = await import('node:fs/promises').then(fs => fs.readFile('web/sw.js', 'utf8'));
+            const list = sw.match(/const SHELL = \[(.*?)\];/s)[1]
+              .split(',').map(s => s.trim().replace(/^['\"]|['\"]\$/g, '')).filter(Boolean)
+              .filter(p => p !== './');
+            const fs = await import('node:fs');
+            const missing = list.filter(p => !fs.existsSync('web/' + p));
+            if (missing.length) { console.error('sw.js precaches missing files:', missing); process.exit(1); }
+            console.log('service worker precache list is complete:', list.length, 'files');
+          "
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -24,26 +24,34 @@ how 0009 came to be claimed twice. `fleet.sh adr-taken` shows who holds what.
 | [0007](0007-no-network-permission.md) | Ship with no network permission | Accepted |
 | [0008](0008-verify-pitch-tracking-off-device.md) | Verify pitch tracking off-device, against real recordings | Accepted |
 | [0009](0009-interfaces-for-the-seams-that-tests-need.md) | Interfaces only where a test needs a seam | Accepted |
+| [0010](0010-one-tuner-core-two-platforms.md) | One tuner core, compiled for two platforms | Accepted |
+| [0011](0011-a-web-tuner-alongside-the-app.md) | A web tuner alongside the app, and the privacy claim | Accepted |
 
 ## The audio path
 
 Everything from the high-pass filter rightwards is plain Kotlin with no Android
 imports, which is what lets the whole chain run under JUnit on a laptop
-([0008](0008-verify-pitch-tracking-off-device.md)).
+([0008](0008-verify-pitch-tracking-off-device.md)) and, since
+[0010](0010-one-tuner-core-two-platforms.md), compile to JavaScript for the web
+app as well. The green band is the shared `core` module; each platform supplies
+only its own microphone and its own user interface.
 
 ```mermaid
 flowchart LR
-    mic["AudioRecord<br/>(Android)"] --> hp["HighPassFilter<br/>25 Hz"]
-    hp --> det["PitchDetector<br/>YIN + FFT"]
+    mic["AudioRecord<br/>(Android)"] --> hp
+    web["AudioWorklet<br/>(browser)"] --> hp
+    hp["HighPassFilter<br/>25 Hz"] --> det["PitchDetector<br/>YIN + FFT"]
     det --> sm["PitchSmoother<br/>gating, octave, easing"]
     sm --> tgt["PitchTargeting<br/>string or chromatic"]
     tgt --> ui["TunerViewModel<br/>and Compose"]
+    tgt --> dom["main.js<br/>and canvas"]
 
     classDef android fill:#f6d8d8,stroke:#9b4b4b,color:#2b1414
+    classDef browser fill:#d8e2f6,stroke:#4b5f9b,color:#141c2b
     classDef pure fill:#dbe9d6,stroke:#4f7a43,color:#16210f
-    class mic android
+    class mic,ui android
+    class web,dom browser
     class hp,det,sm,tgt pure
-    class ui android
 ```
 
 `AudioEngine` is the only file under `audio/` or `model/` that imports
@@ -60,9 +68,12 @@ It should print exactly one path, ending `audio/AudioEngine.kt`. Test source
 sets are excluded deliberately: an instrumented test under `audio/` may import
 `android.*`, and does.
 
-The question is asked of the repository rather than of one directory, so the
-answer stays meaningful if these files move between modules — which is the point
-at which it would otherwise quietly stop being checked.
+Since [0010](0010-one-tuner-core-two-platforms.md) most of those files live in
+`core/src/commonMain/`, where an Android import would not compile at all, so the
+build enforces the larger half of this on its own. The grep still earns its
+place for the app module's half, and it is asked of the repository rather than
+of one directory, so it keeps answering after the next move — which is the point
+at which a hardcoded path would quietly stop being checked.
 
 ## Template
 

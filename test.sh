@@ -174,11 +174,14 @@ if [ "$RUN_UNIT" = true ]; then
         echo -e "${YELLOW}⚠${NC} No instrument recordings — those tests will skip."
         echo "  Run ./test.sh --audio to include them."
     fi
-    if ./gradlew :app:testDebugUnitTest; then
+    # The pitch chain and the tuning catalog live in :core; the app module
+    # holds only what needs Android. Both halves have to run.
+    if ./gradlew :core:jvmTest :app:testDebugUnitTest; then
         echo -e "${GREEN}✓${NC} Unit tests passed"
     else
         echo -e "${RED}✗${NC} Unit tests failed"
-        echo "  Report: app/build/reports/tests/testDebugUnitTest/index.html"
+        echo "  Reports: core/build/reports/tests/jvmTest/index.html"
+        echo "           app/build/reports/tests/testDebugUnitTest/index.html"
         FAILURES=$((FAILURES + 1))
     fi
     echo ""

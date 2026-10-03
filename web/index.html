@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover so the dial can use the full height of a notched phone;
+     the safe-area insets are added back in CSS. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nobs Tuner</title>
+<meta name="description" content="A chromatic and preset-based tuner for guitar, bass, ukulele, banjo, mandolin and orchestral strings. Everything happens on your device.">
+<!--
+  The privacy claim, made enforceable. Everything the page may load comes from
+  its own origin, `connect-src 'self'` means no XHR, fetch, WebSocket or beacon
+  can reach anywhere else, and with no inline script or style permitted there is
+  nowhere for an injected one to run. A reader does not have to take the claim on
+  trust: this header is what the browser enforces, and DevTools shows the
+  requests that were actually made.
+
+  `frame-ancestors` is absent on purpose: a browser ignores it in a <meta>
+  element, and a static host does not let us send real headers. Framing is not
+  a risk worth a directive that does nothing.
+-->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self';
+  style-src 'self';
+  img-src 'self';
+  font-src 'self';
+  media-src 'self';
+  connect-src 'self';
+  worker-src 'self';
+  manifest-src 'self';
+  base-uri 'none';
+  form-action 'none';
+  object-src 'none'">
+<meta name="color-scheme" content="light dark">
+<!-- Replaced at runtime to match the resolved theme; this is the dark value
+     because a standalone launch most often lands on a dark splash. -->
+<meta name="theme-color" content="#15130E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nobs Tuner">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<noscript>
+  <p class="noscript">Nobs Tuner analyses sound in your browser, so it needs JavaScript to run.</p>
+</noscript>
+
+<div id="app" aria-busy="true"></div>
+
+<!-- Announces the note and how far off it is, for screen readers that cannot
+     see the dial. Throttled in main.js so it does not speak every frame. -->
+<p id="live-reading" class="visually-hidden" role="status" aria-live="polite"></p>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

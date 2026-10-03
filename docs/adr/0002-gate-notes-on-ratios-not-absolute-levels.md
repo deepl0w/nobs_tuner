@@ -36,7 +36,7 @@ Decide with ratios, which do not depend on input gain:
 - **A margin above a learned noise floor** (`snrMarginDb` = 12 dB).
 
 The floor is estimated in
-[`PitchSmoother.noiseFloor()`](../../app/src/main/java/io/github/deeplow/nobstuner/audio/PitchSmoother.kt)
+[`PitchSmoother.noiseFloor()`](../../core/src/commonMain/kotlin/io/github/deeplow/nobstuner/audio/PitchSmoother.kt)
 with three properties, each of which exists because its absence broke something:
 
 1. **Only aperiodic frames contribute.** A bowed note held at a steady level

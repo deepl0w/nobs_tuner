@@ -55,6 +55,14 @@ test-audio: ## Fetch instrument recordings, then run unit tests
 device-test: ## Run instrumented tests on a connected device
 	@./test.sh --device
 
+test-web: ## Run the shared pitch suite against the JavaScript build (needs Node)
+	@./gradlew :core:jsNodeTest
+
+web: ## Compile the core and serve the web app at http://localhost:8000
+	@./gradlew :core:syncWebCore
+	@echo "Serving web/ at http://localhost:8000 — Ctrl-C to stop."
+	@python3 -m http.server 8000 --directory web
+
 lint: ## Run Android lint on the release variant
 	@./test.sh --lint
 

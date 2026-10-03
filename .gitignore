@@ -19,7 +19,7 @@ captures/
 .DS_Store
 
 # Downloaded test recordings (see tools/fetch-test-audio.sh)
-app/src/test/resources/realaudio/
+core/src/jvmTest/resources/realaudio/
 
 # Claude Code: the agent configuration is version-controlled so every worktree
 # gets it; session state, worktrees and per-worktree role notes are not.
@@ -28,3 +28,6 @@ app/src/test/resources/realaudio/
 !.claude/scripts/
 !.claude/skills/
 !.claude/commands/
+
+# Compiled Kotlin core for the web app; produced by `./gradlew :core:syncWebCore`.
+web/vendor/

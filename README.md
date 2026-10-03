@@ -1,8 +1,13 @@
 # Nobs Tuner
 
-A chromatic and preset-based tuner for string instruments, built for Android with
-Kotlin and Jetpack Compose. Everything happens on the device: no network access,
-no analytics, no recording.
+A chromatic and preset-based tuner for string instruments. Everything happens on
+your device: no analytics, no recording, nothing sent anywhere.
+
+It comes in two forms that are the same tuner rather than two tuners — an
+**Android app** in Kotlin and Jetpack Compose, and a **web app** you can open in
+a browser and install to a home screen. The pitch detection, the note maths and
+the whole tuning catalog are one body of code compiled for both, and the same
+test suite runs against both compilations.
 
 ![guitar, bass, ukulele, banjo, mandolin, violin, cello and more](docs/play-assets/play-icon-512.png)
 
@@ -43,11 +48,30 @@ than O(N²). On top of the textbook algorithm:
 Analysis runs on 8192-sample frames at 44.1 kHz with a 2048-sample hop — about 21
 readings a second, with enough window to resolve a low B on a five-string bass.
 
+## The two apps
+
+| | Android | Web |
+|---|---|---|
+| Built from | `app/` — Compose | `web/` — plain HTML, CSS and ES modules |
+| Shares | `core/` — pitch, note maths, catalog | the same `core/`, compiled to JavaScript |
+| Microphone | `AudioRecord`, asking for an unprocessed input | `getUserMedia` into an `AudioWorklet` |
+| Stores settings in | DataStore | the browser's local storage |
+| Network | no permission at all | a static page; nothing reaches another origin |
+| Offline | always | after the first load, via a service worker |
+
+The web app has its own [README](web/README.md). The privacy position differs
+slightly between the two, and
+[PRIVACY_POLICY.md](PRIVACY_POLICY.md) answers for each separately rather than
+blurring them.
+
 ## Building
 
 Requires JDK 17+ and the Android SDK. Everything else comes from the wrapper.
 Point the build at your SDK with a `local.properties` containing
 `sdk.dir=/path/to/Android/Sdk`, or set `ANDROID_HOME`.
+
+Building or testing the shared core's JavaScript side also needs **Node and
+Yarn** on your `PATH`. The Android app alone does not.
 
 Check the machine is ready, then build:
 
@@ -58,12 +82,24 @@ Check the machine is ready, then build:
 ./build.sh --bundle   # the .aab to upload to Play
 ```
 
+For the web app:
+
+```bash
+./gradlew :core:syncWebCore               # compile the core into web/vendor/
+python3 -m http.server 8000 --directory web
+```
+
+Then open `http://localhost:8000`. It has to be served over HTTP rather than
+opened as a file — the microphone needs a secure origin, and localhost counts.
+
 `make` wraps the same things — `make help` lists every target:
 
 | Command | Does |
 |---|---|
 | `make build` / `make run` | Debug APK; or build, install and launch |
-| `make test` | JVM unit tests |
+| `make test` | JVM unit tests, shared core and app |
+| `make test-web` | The same pitch suite against the JavaScript build |
+| `make web` | Compile the core and serve the web app on :8000 |
 | `make test-audio` | Fetch the instrument recordings, then run the unit tests |
 | `make device-test` | Instrumented tests on a connected device |
 | `make lint` / `make verify` | Lint; or unit tests + lint + instrumented |
@@ -83,16 +119,32 @@ directly:
 
 ```bash
 ./gradlew :app:assembleDebug        # debug APK
-./gradlew :app:testDebugUnitTest    # unit tests
+./gradlew :core:jvmTest             # shared pitch and catalog tests
+./gradlew :core:jsNodeTest          # the same, against the JavaScript build
+./gradlew :app:testDebugUnitTest    # Android-side unit tests
+./gradlew :core:syncWebCore         # compile the core into web/vendor/
 ./gradlew :app:lintRelease          # lint
 ./gradlew :app:bundleRelease        # Play Store AAB
 ```
 
 ## Tests
 
-`./gradlew :app:testDebugUnitTest` runs the JVM suite: note maths, the tuning
-catalog, the FFT against a naive DFT, and the pitch detector against synthesised
-tones (clean, harmonically rich, missing-fundamental, noisy, DC-offset).
+`./gradlew :core:jvmTest :app:testDebugUnitTest` runs the JVM suite: note maths,
+the tuning catalog, the FFT against a naive DFT, the pitch detector against
+synthesised tones (clean, harmonically rich, missing-fundamental, noisy,
+DC-offset), and the view models against fakes.
+
+Most of that lives in the shared core, so it also runs against the JavaScript
+the browser loads:
+
+```bash
+./gradlew :core:jsNodeTest    # the same pitch suite, on Node
+```
+
+That is not belt and braces. It is the thing that stops the web tuner and the
+Android tuner quietly disagreeing about what note is being played — a
+disagreement that would otherwise surface on someone's instrument rather than in
+CI.
 
 There is also a regression suite that runs real instrument recordings — guitar,
 cello and violin chromatic runs — through the same frame size, hop, filter,
@@ -102,7 +154,7 @@ megabytes, so they are not in version control:
 
 ```bash
 tools/fetch-test-audio.sh     # needs curl and ffmpeg
-./gradlew :app:testDebugUnitTest --tests '*RealRecording*'
+./gradlew :core:jvmTest --tests '*RealRecording*'
 ```
 
 Without them those tests skip and the rest of the suite still runs.
