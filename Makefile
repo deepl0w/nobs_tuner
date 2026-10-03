@@ -1,4 +1,4 @@
-# StringTune Makefile
+# Nobs Tuner Makefile
 # Provides simple commands for building, testing and deploying without Android Studio
 
 .PHONY: help check test test-audio lint verify build install run deploy release \
@@ -33,7 +33,7 @@ $(error Could not read namespace from app/build.gradle.kts)
 endif
 
 help: ## Show this help message
-	@echo "$(BLUE)StringTune Build Commands$(NC)"
+	@echo "$(BLUE)Nobs Tuner Build Commands$(NC)"
 	@echo "======================================"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-18s$(NC) %s\n", $$1, $$2}'

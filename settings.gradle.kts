@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "StringTune"
+rootProject.name = "NobsTuner"
 include(":app")
