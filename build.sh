@@ -18,7 +18,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 # renaming applicationId before publishing does not silently break the scripts.
 # sed rather than `grep -oP`, which only exists in GNU grep.
 gradle_value() {
-    sed -n "s/.*$1[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" app/build.gradle.kts | head -1
+    sed -nE 's/.*'"$1"'[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' app/build.gradle.kts | head -1
 }
 
 APP_ID=$(gradle_value applicationId)
@@ -142,7 +142,7 @@ if [ "$INSTALL" = true ]; then
         echo "  ./build.sh --install --device $(echo "$DEVICE_LIST" | head -1 | awk '{print $1}')"
         exit 1
     else
-        echo -e "${GREEN}✓${NC} Found $DEVICES device(s)"
+        echo -e "${GREEN}✓${NC} Found device: $(echo "$DEVICE_LIST" | awk '{print $1}')"
     fi
     echo ""
 fi
@@ -203,20 +203,21 @@ else
 fi
 COMPONENT="$PACKAGE/$NAMESPACE.MainActivity"
 
-case "$ARTIFACT" in
-    *-unsigned.apk)
-        if [ "$INSTALL" = true ]; then
-            echo -e "${RED}✗${NC} The release APK is unsigned, and adb cannot install one."
-            echo "  Configure signing in keystore.properties or the ANDROID_KEYSTORE_*"
-            echo "  environment variables — see docs/PLAY_STORE.md."
-            echo "  The unsigned APK itself is at $ARTIFACT."
-            exit 1
-        fi
-        echo -e "${YELLOW}⚠${NC} No keystore configured, so this APK is unsigned."
-        echo "  Sign it before installing or uploading — see docs/PLAY_STORE.md."
-        echo ""
-        ;;
-esac
+UNSIGNED=false
+case "$ARTIFACT" in *-unsigned.apk) UNSIGNED=true ;; esac
+
+if [ "$UNSIGNED" = true ]; then
+    if [ "$INSTALL" = true ]; then
+        echo -e "${RED}✗${NC} The release APK is unsigned, and adb cannot install one."
+        echo "  Configure signing in keystore.properties or the ANDROID_KEYSTORE_*"
+        echo "  environment variables — see docs/PLAY_STORE.md."
+        echo "  The unsigned APK itself is at $ARTIFACT."
+        exit 1
+    fi
+    echo -e "${YELLOW}⚠${NC} No keystore configured, so this APK is unsigned."
+    echo "  Sign it before installing or uploading — see docs/PLAY_STORE.md."
+    echo ""
+fi
 
 # Install if requested
 if [ "$INSTALL" = true ]; then
@@ -251,10 +252,11 @@ fi
 echo -e "${BLUE}=====================================${NC}"
 echo "Next steps:"
 if [ "$INSTALL" = false ]; then
-    case "$ARTIFACT" in
-        *-unsigned.apk) echo "• Sign it first — adb cannot install an unsigned APK" ;;
-        *)              echo "• Install: adb install -r $ARTIFACT" ;;
-    esac
+    if [ "$UNSIGNED" = true ]; then
+        echo "• Sign it first — adb cannot install an unsigned APK"
+    else
+        echo "• Install: adb install -r $ARTIFACT"
+    fi
 fi
 if [ "$RUN" = false ]; then
     echo "• Run: adb shell am start -n $COMPONENT"

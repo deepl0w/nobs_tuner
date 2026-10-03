@@ -16,7 +16,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 # sed rather than `grep -oP`, which only exists in GNU grep.
 gradle_value() {
-    sed -n "s/.*$1[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" app/build.gradle.kts | head -1
+    sed -nE 's/.*'"$1"'[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' app/build.gradle.kts | head -1
 }
 
 APP_ID=$(gradle_value applicationId)
@@ -114,12 +114,20 @@ fi
 
 if [ "$BUILD_TYPE" = "release" ]; then
     PACKAGE="$APP_ID"
-    APK_PATH=$(release_apk_path)
 else
     PACKAGE="${APP_ID}${DEBUG_SUFFIX}"
-    APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
 fi
 COMPONENT="$PACKAGE/$NAMESPACE.MainActivity"
+
+# Resolved fresh at each use rather than stored: a build in between can change
+# which of the two release names exists.
+apk_path() {
+    if [ "$BUILD_TYPE" = "release" ]; then
+        release_apk_path
+    else
+        echo "app/build/outputs/apk/debug/app-debug.apk"
+    fi
+}
 
 # Follows logcat for just this app. The app has no log tag of its own, so the
 # filter is by process id, which also picks up anything the framework says
@@ -132,10 +140,10 @@ app_pid() {
 # giving up: `am start -W` returns once the activity is drawn, but on a slow
 # emulator the pid can still take a moment to show up.
 follow_logs() {
-    local pid i
+    local pid
     pid=$(app_pid)
     if [ -z "$pid" ] && [ "${1:-}" = "--wait" ]; then
-        for i in 1 2 3 4 5 6 7 8 9 10; do
+        for _ in {1..10}; do
             sleep 0.5
             pid=$(app_pid)
             [ -n "$pid" ] && break
@@ -195,7 +203,7 @@ if [ "$LOGS_ONLY" = true ]; then
 fi
 
 # Build if forced or APK doesn't exist
-if [ "$FORCE_BUILD" = true ] || [ ! -f "$APK_PATH" ]; then
+if [ "$FORCE_BUILD" = true ] || [ ! -f "$(apk_path)" ]; then
     echo -e "${YELLOW}Building app...${NC}"
     BUILD_ARGS=()
     [ "$BUILD_TYPE" = "release" ] && BUILD_ARGS+=(--release)
@@ -204,9 +212,7 @@ if [ "$FORCE_BUILD" = true ] || [ ! -f "$APK_PATH" ]; then
     echo ""
 fi
 
-if [ "$BUILD_TYPE" = "release" ]; then
-    APK_PATH=$(release_apk_path)
-fi
+APK_PATH=$(apk_path)
 
 if [ ! -f "$APK_PATH" ]; then
     echo -e "${RED}✗ APK not found at: $APK_PATH${NC}"

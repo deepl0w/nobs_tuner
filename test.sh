@@ -14,8 +14,6 @@ NC='\033[0m'
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-# sed rather than `grep -oP`, which only exists in GNU grep.
-APP_ID=$(sed -n 's/.*applicationId[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
 AUDIO_DIR="app/src/test/resources/realaudio"
 
 echo -e "${BLUE}=====================================${NC}"
@@ -222,12 +220,9 @@ if [ "$RUN_DEVICE" = true ]; then
     else
         # Resolve the target here and pin it, so an ANDROID_SERIAL left over in
         # the caller's shell cannot send the run to a different device.
-        TARGET="$SERIAL"
-        if [ -z "$TARGET" ]; then
-            TARGET=$(echo "$DEVICE_LIST" | awk '{print $1}' | head -1)
-        fi
-        if ! echo "$DEVICE_LIST" | awk '{print $1}' | grep -qx "$TARGET"; then
-            echo -e "${RED}✗${NC} Device '$TARGET' is not connected"
+        TARGET="${SERIAL:-$(echo "$DEVICE_LIST" | awk 'NR==1{print $1}')}"
+        if [ -n "$SERIAL" ] && ! echo "$DEVICE_LIST" | awk '{print $1}' | grep -qx "$SERIAL"; then
+            echo -e "${RED}✗${NC} Device '$SERIAL' is not connected"
             FAILURES=$((FAILURES + 1))
         else
             echo "Target: $TARGET"
