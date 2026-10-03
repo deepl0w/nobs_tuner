@@ -20,11 +20,13 @@ interface TunerRepository {
     val selectedTuningId: Flow<String>
     val chromaticMode: Flow<Boolean>
 
+    /** Clamped to [UserSettings.REFERENCE_PITCH_RANGE]. */
     suspend fun setReferencePitch(hz: Double)
     suspend fun setUseFlats(value: Boolean)
     suspend fun setAutoDetectString(value: Boolean)
     suspend fun setKeepScreenOn(value: Boolean)
     suspend fun setThemeMode(mode: ThemeMode)
+    /** Clamped to [UserSettings.TOLERANCE_RANGE]. */
     suspend fun setToleranceCents(cents: Int)
     suspend fun setDisplayStyle(style: DisplayStyle)
     suspend fun setChromaticMode(value: Boolean)

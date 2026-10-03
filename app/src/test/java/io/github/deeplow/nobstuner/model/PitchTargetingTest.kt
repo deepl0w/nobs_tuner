@@ -221,6 +221,28 @@ class PitchTargetingTest {
     }
 
     @Test
+    fun `selector shows nothing for a tuning with no strings`() {
+        // Nothing to point at, and index 0 would be a crash waiting to happen.
+        val empty = Tuning("empty", "Empty", InstrumentFamily.OTHER, emptyList())
+        assertNull(
+            PitchTargeting.effectivePinnedIndex(
+                manualIndex = null,
+                autoDetect = false,
+                chromatic = false,
+                tuning = empty,
+            ),
+        )
+        assertNull(
+            PitchTargeting.effectivePinnedIndex(
+                manualIndex = 0,
+                autoDetect = false,
+                chromatic = false,
+                tuning = empty,
+            ),
+        )
+    }
+
+    @Test
     fun `selector shows nothing in chromatic mode`() {
         assertNull(
             PitchTargeting.effectivePinnedIndex(
