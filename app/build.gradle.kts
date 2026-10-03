@@ -26,17 +26,16 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() } && file(storeFilePath!!).exists()
 
 android {
-    namespace = "io.github.deeplow.stringtune"
+    namespace = "io.github.deeplow.nobstuner"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.deeplow.stringtune"
+        applicationId = "io.github.deeplow.nobstuner"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
 
-        resourceConfigurations += listOf("en")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -102,6 +101,9 @@ android {
 
     androidResources {
         generateLocaleConfig = false
+        // Only English strings are shipped; this keeps other locales' resources
+        // from being pulled in by libraries.
+        localeFilters += listOf("en")
     }
 
     lint {

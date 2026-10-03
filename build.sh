@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# StringTune - Build Script
+# Nobs Tuner - Build Script
 # Builds the Android app without Android Studio
 
 set -e  # Exit on error
@@ -21,7 +21,7 @@ NAMESPACE=$(grep -oP 'namespace\s*=\s*"\K[^"]+' app/build.gradle.kts)
 DEBUG_SUFFIX=$(grep -oP 'applicationIdSuffix\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
 
 echo -e "${BLUE}=====================================${NC}"
-echo -e "${BLUE}StringTune - Build Script${NC}"
+echo -e "${BLUE}Nobs Tuner - Build Script${NC}"
 echo -e "${BLUE}=====================================${NC}"
 echo ""
 
@@ -179,8 +179,18 @@ if [ "$INSTALL" = true ]; then
     echo -e "${GREEN}✓${NC} App installed successfully"
     echo ""
     echo -e "${YELLOW}Granting microphone permission...${NC}"
-    "${ADB[@]}" shell pm grant "$PACKAGE" android.permission.RECORD_AUDIO 2>/dev/null || true
-    echo -e "${GREEN}✓${NC} Permission granted"
+    # Some manufacturers (OnePlus/Oppo among them) refuse GRANT_RUNTIME_PERMISSIONS
+    # to the adb shell user, so this can fail. Check rather than assume: claiming
+    # success and leaving a silent permission dialog on the device wastes more
+    # time than saying plainly that it has to be tapped.
+    "${ADB[@]}" shell pm grant "$PACKAGE" android.permission.RECORD_AUDIO >/dev/null 2>&1 || true
+    if "${ADB[@]}" shell dumpsys package "$PACKAGE" 2>/dev/null \
+        | tr -d '\r' | grep -q "RECORD_AUDIO: granted=true"; then
+        echo -e "${GREEN}✓${NC} Microphone permission granted"
+    else
+        echo -e "${YELLOW}⚠${NC} Could not grant the microphone permission from adb."
+        echo "  Accept the prompt on the device; this phone's OEM blocks adb grants."
+    fi
     echo ""
 fi
 

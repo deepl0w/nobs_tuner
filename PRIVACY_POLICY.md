@@ -1,16 +1,16 @@
-# Privacy Policy for StringTune
+# Privacy Policy for Nobs Tuner
 
 **Last updated: 3 October 2026**
 
 ## The short version
 
-StringTune listens to your instrument through the microphone and works out what
+Nobs Tuner listens to your instrument through the microphone and works out what
 note it is hearing. That is all it does with the audio, and it all happens on
 your device. Nothing is recorded, stored, or sent anywhere.
 
 ## What the app accesses
 
-**Microphone.** StringTune needs the microphone permission to hear the
+**Microphone.** Nobs Tuner needs the microphone permission to hear the
 instrument you are tuning. Audio is read in short fragments, measured for pitch,
 and discarded immediately. Audio is never written to storage, never sent off the
 device, and never shared with anyone.
@@ -20,7 +20,7 @@ the app, switching to another app, or locking the screen closes it.
 
 ## What the app stores
 
-StringTune saves the following on your device only:
+Nobs Tuner saves the following on your device only:
 
 - your custom tunings,
 - which tunings you have marked as favourites,
@@ -31,7 +31,7 @@ If you have Android's backup enabled, these settings may be included in your
 device backup under your own Google account, in the same way as other apps'
 settings. The developer has no access to those backups.
 
-Uninstalling StringTune removes all of this.
+Uninstalling Nobs Tuner removes all of this.
 
 ## What the app does not do
 
@@ -43,7 +43,7 @@ Uninstalling StringTune removes all of this.
 
 ## Children
 
-StringTune collects no data from anyone, including children.
+Nobs Tuner collects no data from anyone, including children.
 
 ## Changes
 
