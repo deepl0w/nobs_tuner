@@ -186,6 +186,12 @@ The instrument recordings fetched by `tools/fetch-test-audio.sh` are **not**
 covered by it. They belong to the University of Iowa Electronic Music Studios,
 are downloaded on demand, and are not redistributed in this repository.
 
+## Deploying
+
+Android bundles and the web app are both built by GitHub Actions. The settings
+that have to be turned on by hand — the Pages source and the signing secrets —
+are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Architecture decisions
 
 The decisions behind the pitch detection, the gating, the persistence and the
