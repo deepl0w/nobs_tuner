@@ -14,7 +14,8 @@ NC='\033[0m'
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-APP_ID=$(grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts)
+# sed rather than `grep -oP`, which only exists in GNU grep.
+APP_ID=$(sed -n 's/.*applicationId[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
 AUDIO_DIR="app/src/test/resources/realaudio"
 
 echo -e "${BLUE}=====================================${NC}"
@@ -96,9 +97,12 @@ if [ "$CHECK_ONLY" = true ]; then
     fi
 
     echo -n "Checking Android SDK... "
-    SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
-    if [ -z "$SDK_DIR" ] && [ -f local.properties ]; then
-        SDK_DIR=$(grep -oP '^sdk\.dir=\K.*' local.properties || true)
+    SDK_DIR=""
+    if [ -f local.properties ]; then
+        SDK_DIR=$(sed -n 's/^sdk\.dir=//p' local.properties | head -1)
+    fi
+    if [ -z "$SDK_DIR" ]; then
+        SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
     fi
     if [ -n "$SDK_DIR" ] && [ -d "$SDK_DIR" ]; then
         echo -e "${GREEN}✓ $SDK_DIR${NC}"
@@ -216,18 +220,19 @@ if [ "$RUN_DEVICE" = true ]; then
         echo "    ./test.sh --device --serial $(echo "$DEVICE_LIST" | head -1 | awk '{print $1}')"
         FAILURES=$((FAILURES + 1))
     else
-        if [ -n "$SERIAL" ]; then
-            if ! echo "$DEVICE_LIST" | awk '{print $1}' | grep -qx "$SERIAL"; then
-                echo -e "${RED}✗${NC} Device '$SERIAL' is not connected"
-                FAILURES=$((FAILURES + 1))
-                SERIAL=""
-            else
-                echo "Target: $SERIAL"
-                # AGP honours ANDROID_SERIAL when picking devices.
-                export ANDROID_SERIAL="$SERIAL"
-            fi
+        # Resolve the target here and pin it, so an ANDROID_SERIAL left over in
+        # the caller's shell cannot send the run to a different device.
+        TARGET="$SERIAL"
+        if [ -z "$TARGET" ]; then
+            TARGET=$(echo "$DEVICE_LIST" | awk '{print $1}' | head -1)
         fi
-        if [ "$FAILURES" -eq 0 ] || [ -n "$ANDROID_SERIAL" ]; then
+        if ! echo "$DEVICE_LIST" | awk '{print $1}' | grep -qx "$TARGET"; then
+            echo -e "${RED}✗${NC} Device '$TARGET' is not connected"
+            FAILURES=$((FAILURES + 1))
+        else
+            echo "Target: $TARGET"
+            # AGP honours ANDROID_SERIAL when picking devices.
+            export ANDROID_SERIAL="$TARGET"
             if ./gradlew :app:connectedDebugAndroidTest; then
                 echo -e "${GREEN}✓${NC} Instrumented tests passed"
             else

@@ -1,9 +1,9 @@
 # StringTune Makefile
 # Provides simple commands for building, testing and deploying without Android Studio
 
-.PHONY: help check test test-audio lint build install run deploy release bundle \
-        clean gradle-clean logs devices uninstall restart-adb launch stop \
-        grant-permissions info device-test dev quick full
+.PHONY: help check test test-audio lint verify build install run deploy release \
+        release-install bundle clean gradle-clean logs devices uninstall \
+        restart-adb launch stop grant-permissions info device-test dev quick full
 
 # Default target
 .DEFAULT_GOAL := help
@@ -16,10 +16,21 @@ BLUE   := $(shell printf '\033[0;34m')
 NC     := $(shell printf '\033[0m')
 
 # Read the ids from Gradle so a rename before publishing does not break these.
-APP_ID        := $(shell grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts)
-NAMESPACE     := $(shell grep -oP 'namespace\s*=\s*"\K[^"]+' app/build.gradle.kts)
-DEBUG_SUFFIX  := $(shell grep -oP 'applicationIdSuffix\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+# sed rather than `grep -oP`, which only exists in GNU grep: under BSD userland
+# the ids would come back empty and the adb targets would run malformed.
+gradle_value = $(shell sed -n 's/.*$(1)[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
+
+APP_ID        := $(call gradle_value,applicationId)
+NAMESPACE     := $(call gradle_value,namespace)
+DEBUG_SUFFIX  := $(call gradle_value,applicationIdSuffix)
 DEBUG_PACKAGE := $(APP_ID)$(DEBUG_SUFFIX)
+
+ifeq ($(strip $(APP_ID)),)
+$(error Could not read applicationId from app/build.gradle.kts)
+endif
+ifeq ($(strip $(NAMESPACE)),)
+$(error Could not read namespace from app/build.gradle.kts)
+endif
 
 help: ## Show this help message
 	@echo "$(BLUE)StringTune Build Commands$(NC)"

@@ -16,9 +16,30 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 # Read the identifiers out of the Gradle config rather than hardcoding them, so
 # renaming applicationId before publishing does not silently break the scripts.
-APP_ID=$(grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts)
-NAMESPACE=$(grep -oP 'namespace\s*=\s*"\K[^"]+' app/build.gradle.kts)
-DEBUG_SUFFIX=$(grep -oP 'applicationIdSuffix\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+# sed rather than `grep -oP`, which only exists in GNU grep.
+gradle_value() {
+    sed -n "s/.*$1[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" app/build.gradle.kts | head -1
+}
+
+APP_ID=$(gradle_value applicationId)
+NAMESPACE=$(gradle_value namespace)
+DEBUG_SUFFIX=$(gradle_value applicationIdSuffix)
+
+if [ -z "$APP_ID" ] || [ -z "$NAMESPACE" ]; then
+    echo -e "${RED}✗${NC} Could not read applicationId/namespace from app/build.gradle.kts"
+    exit 1
+fi
+
+# Without a keystore AGP leaves the release APK unsigned and names it
+# accordingly, so the output path is not known until after the build.
+release_apk_path() {
+    local dir="app/build/outputs/apk/release"
+    if [ -f "$dir/app-release-unsigned.apk" ] && [ ! -f "$dir/app-release.apk" ]; then
+        echo "$dir/app-release-unsigned.apk"
+    else
+        echo "$dir/app-release.apk"
+    fi
+}
 
 echo -e "${BLUE}=====================================${NC}"
 echo -e "${BLUE}StringTune - Build Script${NC}"
@@ -101,7 +122,17 @@ if [ "$INSTALL" = true ]; then
         echo -e "${RED}✗${NC} No device found!"
         echo "Please connect a device or start an emulator"
         exit 1
-    elif [ "$DEVICES" -gt 1 ] && [ -z "$SERIAL" ]; then
+    elif [ -n "$SERIAL" ]; then
+        # A serial that is not attached would otherwise only blow up on
+        # `adb install`, after the whole build.
+        if echo "$DEVICE_LIST" | awk '{print $1}' | grep -qx "$SERIAL"; then
+            echo -e "${GREEN}✓${NC} Using device: $SERIAL"
+        else
+            echo -e "${RED}✗${NC} Device '$SERIAL' is not connected:"
+            echo "$DEVICE_LIST" | sed 's/^/    /'
+            exit 1
+        fi
+    elif [ "$DEVICES" -gt 1 ]; then
         # adb refuses to guess, so fail here with something actionable rather
         # than letting the install blow up after a full build.
         echo -e "${RED}✗${NC} More than one device is connected:"
@@ -124,7 +155,7 @@ if [ "$BUNDLE" = true ]; then
 elif [ "$BUILD_TYPE" = "release" ]; then
     echo -e "${YELLOW}Building Android app (release)...${NC}"
     ./gradlew :app:assembleRelease
-    ARTIFACT="app/build/outputs/apk/release/app-release.apk"
+    ARTIFACT=$(release_apk_path)
 else
     echo -e "${YELLOW}Building Android app (debug)...${NC}"
     ./gradlew :app:assembleDebug
@@ -172,6 +203,21 @@ else
 fi
 COMPONENT="$PACKAGE/$NAMESPACE.MainActivity"
 
+case "$ARTIFACT" in
+    *-unsigned.apk)
+        if [ "$INSTALL" = true ]; then
+            echo -e "${RED}✗${NC} The release APK is unsigned, and adb cannot install one."
+            echo "  Configure signing in keystore.properties or the ANDROID_KEYSTORE_*"
+            echo "  environment variables — see docs/PLAY_STORE.md."
+            echo "  The unsigned APK itself is at $ARTIFACT."
+            exit 1
+        fi
+        echo -e "${YELLOW}⚠${NC} No keystore configured, so this APK is unsigned."
+        echo "  Sign it before installing or uploading — see docs/PLAY_STORE.md."
+        echo ""
+        ;;
+esac
+
 # Install if requested
 if [ "$INSTALL" = true ]; then
     echo -e "${YELLOW}Installing APK...${NC}"
@@ -195,7 +241,10 @@ fi
 echo -e "${BLUE}=====================================${NC}"
 echo "Next steps:"
 if [ "$INSTALL" = false ]; then
-    echo "• Install: adb install -r $ARTIFACT"
+    case "$ARTIFACT" in
+        *-unsigned.apk) echo "• Sign it first — adb cannot install an unsigned APK" ;;
+        *)              echo "• Install: adb install -r $ARTIFACT" ;;
+    esac
 fi
 if [ "$RUN" = false ]; then
     echo "• Run: adb shell am start -n $COMPONENT"

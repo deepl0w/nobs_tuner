@@ -14,9 +14,29 @@ NC='\033[0m'
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-APP_ID=$(grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts)
-NAMESPACE=$(grep -oP 'namespace\s*=\s*"\K[^"]+' app/build.gradle.kts)
-DEBUG_SUFFIX=$(grep -oP 'applicationIdSuffix\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+# sed rather than `grep -oP`, which only exists in GNU grep.
+gradle_value() {
+    sed -n "s/.*$1[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" app/build.gradle.kts | head -1
+}
+
+APP_ID=$(gradle_value applicationId)
+NAMESPACE=$(gradle_value namespace)
+DEBUG_SUFFIX=$(gradle_value applicationIdSuffix)
+
+if [ -z "$APP_ID" ] || [ -z "$NAMESPACE" ]; then
+    echo -e "${RED}✗${NC} Could not read applicationId/namespace from app/build.gradle.kts"
+    exit 1
+fi
+
+# Without a keystore AGP leaves the release APK unsigned and names it so.
+release_apk_path() {
+    local dir="app/build/outputs/apk/release"
+    if [ -f "$dir/app-release-unsigned.apk" ] && [ ! -f "$dir/app-release.apk" ]; then
+        echo "$dir/app-release-unsigned.apk"
+    else
+        echo "$dir/app-release.apk"
+    fi
+}
 
 echo -e "${BLUE}=====================================${NC}"
 echo -e "${BLUE}StringTune - Deploy Script${NC}"
@@ -94,7 +114,7 @@ fi
 
 if [ "$BUILD_TYPE" = "release" ]; then
     PACKAGE="$APP_ID"
-    APK_PATH="app/build/outputs/apk/release/app-release.apk"
+    APK_PATH=$(release_apk_path)
 else
     PACKAGE="${APP_ID}${DEBUG_SUFFIX}"
     APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
@@ -104,9 +124,23 @@ COMPONENT="$PACKAGE/$NAMESPACE.MainActivity"
 # Follows logcat for just this app. The app has no log tag of its own, so the
 # filter is by process id, which also picks up anything the framework says
 # about it.
+app_pid() {
+    "${ADB[@]}" shell pidof -s "$PACKAGE" 2>/dev/null | tr -d '\r'
+}
+
+# With --wait, give a cold start time to get as far as a running process before
+# giving up: `am start -W` returns once the activity is drawn, but on a slow
+# emulator the pid can still take a moment to show up.
 follow_logs() {
-    local pid
-    pid=$("${ADB[@]}" shell pidof -s "$PACKAGE" 2>/dev/null | tr -d '\r')
+    local pid i
+    pid=$(app_pid)
+    if [ -z "$pid" ] && [ "${1:-}" = "--wait" ]; then
+        for i in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 0.5
+            pid=$(app_pid)
+            [ -n "$pid" ] && break
+        done
+    fi
     if [ -z "$pid" ]; then
         echo -e "${YELLOW}⚠${NC} $PACKAGE is not running; showing errors only"
         "${ADB[@]}" logcat "*:E"
@@ -170,11 +204,24 @@ if [ "$FORCE_BUILD" = true ] || [ ! -f "$APK_PATH" ]; then
     echo ""
 fi
 
+if [ "$BUILD_TYPE" = "release" ]; then
+    APK_PATH=$(release_apk_path)
+fi
+
 if [ ! -f "$APK_PATH" ]; then
     echo -e "${RED}✗ APK not found at: $APK_PATH${NC}"
     echo "Run with --build flag to build first"
     exit 1
 fi
+
+case "$APK_PATH" in
+    *-unsigned.apk)
+        echo -e "${RED}✗ The release APK is unsigned, and adb cannot install one.${NC}"
+        echo "Configure signing in keystore.properties or the ANDROID_KEYSTORE_*"
+        echo "environment variables — see docs/PLAY_STORE.md."
+        exit 1
+        ;;
+esac
 
 APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
 echo "Deploying APK:"
@@ -206,11 +253,10 @@ echo ""
 if [ "$LAUNCH" = true ]; then
     echo -e "${YELLOW}Launching app...${NC}"
     "${ADB[@]}" logcat -c
-    "${ADB[@]}" shell am start -n "$COMPONENT"
+    "${ADB[@]}" shell am start -W -n "$COMPONENT"
     echo -e "${GREEN}✓ App launched${NC}"
     echo ""
-    sleep 1
-    follow_logs
+    follow_logs --wait
 else
     echo -e "${GREEN}=====================================${NC}"
     echo -e "${GREEN}Deployment Complete!${NC}"
