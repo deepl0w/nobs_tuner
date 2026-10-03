@@ -18,13 +18,14 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 
 /**
- * Microphone capture feeding the [PitchDetector].
+ * The microphone [PitchSource], capturing frames and feeding them to
+ * [PitchDetector].
  *
  * Collecting [pitchEstimates] opens the microphone; cancelling the collection
  * closes it. Nothing is retained between collections, so the recorder is never
  * left holding the mic while the app is backgrounded.
  */
-class AudioEngine(private val context: Context) {
+class AudioEngine(private val context: Context) : PitchSource {
 
     companion object {
         /** 44.1 kHz is supported on every Android device; higher rates are not. */
@@ -44,7 +45,7 @@ class AudioEngine(private val context: Context) {
         private const val DIAG = "NobsTunerAudio"
     }
 
-    fun hasPermission(): Boolean =
+    override fun hasPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
 
@@ -53,7 +54,7 @@ class AudioEngine(private val context: Context) {
      * permission is missing and [IllegalStateException] if the recorder cannot
      * be opened (another app holding the mic, for example).
      */
-    fun pitchEstimates(): Flow<PitchEstimate> = flow {
+    override fun pitchEstimates(): Flow<PitchEstimate> = flow {
         if (!hasPermission()) throw SecurityException("RECORD_AUDIO permission not granted")
 
         val minBuffer = AudioRecord.getMinBufferSize(

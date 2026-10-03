@@ -353,10 +353,13 @@ private fun Strings(
     )
     Spacer(Modifier.height(10.dp))
     HintText(
-        text = if (state.manualStringIndex != null) {
-            "Listening for one string. Tap it again for automatic detection."
-        } else {
-            "Tap a string to lock onto it."
+        text = when {
+            // With automatic detection off the player is always aiming at one
+            // string, so offering to hand back to detection would be a lie.
+            !state.settings.autoDetectString -> "Tap the string you are tuning."
+            state.manualStringIndex != null ->
+                "Listening for one string. Tap it again for automatic detection."
+            else -> "Tap a string to lock onto it."
         },
     )
 }

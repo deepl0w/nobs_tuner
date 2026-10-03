@@ -1,39 +1,35 @@
 package io.github.deeplow.nobstuner.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.deeplow.nobstuner.audio.AudioEngine
+import io.github.deeplow.nobstuner.appContainer
 import io.github.deeplow.nobstuner.audio.PitchSmoother
+import io.github.deeplow.nobstuner.audio.PitchSource
 import io.github.deeplow.nobstuner.audio.TrackedPitch
-import io.github.deeplow.nobstuner.data.DisplayStyle
-import io.github.deeplow.nobstuner.data.ThemeMode
 import io.github.deeplow.nobstuner.data.TunerRepository
 import io.github.deeplow.nobstuner.data.UserSettings
-import io.github.deeplow.nobstuner.model.InstrumentFamily
-import io.github.deeplow.nobstuner.model.Notes
 import io.github.deeplow.nobstuner.model.Tuning
 import io.github.deeplow.nobstuner.model.TuningCatalog
+import io.github.deeplow.nobstuner.model.TuningResolver
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.UUID
-import kotlin.math.abs
 
 /** The live pitch resolved against whatever the tuner is currently aiming at. */
 data class TuningReading(
@@ -53,36 +49,61 @@ data class TunerUiState(
     val chromaticMode: Boolean = false,
     val reading: TuningReading? = null,
     val isFavorite: Boolean = false,
-    /** Null means "auto": whichever string is being played. */
+    /** The string shown as chosen, or null when detection is picking it. */
     val manualStringIndex: Int? = null,
     val micPermissionGranted: Boolean = false,
     val audioError: String? = null,
 )
 
-data class LibraryState(
-    val favorites: List<Tuning> = emptyList(),
-    val presetsByFamily: Map<InstrumentFamily, List<Tuning>> = emptyMap(),
-    val customTunings: List<Tuning> = emptyList(),
-    val favoriteIds: Set<String> = emptySet(),
-    val selectedId: String = TuningCatalog.default.id,
-    val useFlats: Boolean = false,
-)
-
+/**
+ * Drives the tuner screen: owns the listening session and turns detected
+ * pitches into a reading against the selected tuning.
+ *
+ * Deliberately does not own the tuning library or the settings screen — those
+ * belong to [LibraryViewModel] and [SettingsViewModel]. All three read and
+ * write the same [TunerRepository], which is what keeps them consistent.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
-class TunerViewModel(application: Application) : AndroidViewModel(application) {
+class TunerViewModel(
+    private val repository: TunerRepository,
+    private val pitchSource: PitchSource,
+    private val smoother: PitchSmoother = PitchSmoother(),
+) : ViewModel() {
 
-    private val repository = TunerRepository(application)
-    private val audioEngine = AudioEngine(application)
-    private val smoother = PitchSmoother()
+    /**
+     * What the tuner is aiming at. Chromatic mode and the selected tuning are
+     * one concept here because they are alternatives, not independent switches.
+     */
+    private data class Target(val tuning: Tuning, val chromatic: Boolean) {
+        /** Changes whenever the thing being aimed at changes. */
+        val key: String get() = if (chromatic) CHROMATIC_KEY else tuning.id
+    }
+
+    /**
+     * A string the player tapped, remembered against the target it was chosen
+     * for. Tying the two together means a pin stops applying by itself when the
+     * tuning changes, instead of needing something to watch for that and clear
+     * it.
+     */
+    private data class StringPin(val targetKey: String, val index: Int) {
+        fun indexFor(target: Target): Int? = index.takeIf { targetKey == target.key }
+    }
 
     private val listening = MutableStateFlow(false)
-    private val manualStringIndex = MutableStateFlow<Int?>(null)
-    private val micPermissionGranted = MutableStateFlow(audioEngine.hasPermission())
+    private val pin = MutableStateFlow<StringPin?>(null)
+    private val micPermissionGranted = MutableStateFlow(pitchSource.hasPermission())
     private val audioError = MutableStateFlow<String?>(null)
 
-    /** Strings the user has already brought into tune this session. */
-    private val _tunedStrings = MutableStateFlow<Set<Int>>(emptySet())
-    val tunedStrings: StateFlow<Set<Int>> = _tunedStrings.asStateFlow()
+    private val activeTarget: StateFlow<Target> = combine(
+        repository.selectedTuningId,
+        repository.customTunings,
+        repository.chromaticMode,
+    ) { id, custom, chromatic ->
+        val tuning = TuningCatalog.findById(id)
+            ?: custom.firstOrNull { it.id == id }
+            ?: TuningCatalog.default
+        Target(tuning, chromatic)
+    }.stateIn(viewModelScope, WHILE_OBSERVED, Target(TuningCatalog.default, false))
 
     private val trackedPitch: StateFlow<TrackedPitch?> = listening
         .flatMapLatest { isListening ->
@@ -90,7 +111,7 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
                 smoother.reset()
                 flowOf(null)
             } else {
-                audioEngine.pitchEstimates()
+                pitchSource.pitchEstimates()
                     .map { smoother.push(it) }
                     .onStart {
                         smoother.reset()
@@ -105,87 +126,60 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
                     }
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        .stateIn(viewModelScope, WHILE_OBSERVED, null)
 
-    /** The tuning currently selected, resolved across presets and custom entries. */
-    private val activeTuning: StateFlow<Tuning> =
-        combine(repository.selectedTuningId, repository.customTunings) { id, custom ->
-            TuningCatalog.findById(id)
-                ?: custom.firstOrNull { it.id == id }
-                ?: TuningCatalog.default
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TuningCatalog.default)
+    private val reading: StateFlow<TuningReading?> = combine(
+        trackedPitch,
+        repository.settings,
+        activeTarget,
+        pin,
+    ) { pitch, settings, target, pin ->
+        pitch?.let { resolve(it, settings, target, pin) }
+    }.stateIn(viewModelScope, WHILE_OBSERVED, null)
 
-    private val session = combine(
-        repository.chromaticMode,
-        micPermissionGranted,
-        audioError,
-        repository.favoriteIds,
-    ) { chromatic, permission, error, favorites ->
-        SessionState(chromatic, permission, error, favorites)
-    }
+    /**
+     * Strings brought into tune since the target last changed.
+     *
+     * Accumulated inside the flow graph rather than by a collector in `init`:
+     * a permanent internal subscriber would hold every upstream flow open for
+     * the view model's whole life and quietly defeat [WHILE_OBSERVED] on all of
+     * them. Restarting the fold on each target change is also what clears the
+     * ticks, so no separate reset is needed.
+     */
+    val tunedStrings: StateFlow<Set<Int>> = activeTarget
+        .map { it.key }
+        .distinctUntilChanged()
+        .flatMapLatest { accumulateTunedStrings() }
+        .stateIn(viewModelScope, WHILE_OBSERVED, emptySet())
 
     val uiState: StateFlow<TunerUiState> = combine(
         repository.settings,
-        activeTuning,
-        trackedPitch,
-        manualStringIndex,
-        session,
-    ) { settings, tuning, pitch, manual, session ->
+        activeTarget,
+        reading,
+        pin,
+        session(),
+    ) { settings, target, reading, pin, session ->
         TunerUiState(
             settings = settings,
-            tuning = tuning,
-            chromaticMode = session.chromatic,
-            reading = pitch?.let { resolve(it, settings, tuning, session.chromatic, manual) },
-            isFavorite = tuning.id in session.favorites,
-            manualStringIndex = manual,
+            tuning = target.tuning,
+            chromaticMode = target.chromatic,
+            reading = reading,
+            isFavorite = target.tuning.id in session.favorites,
+            manualStringIndex = TuningResolver.effectivePinnedIndex(
+                pinnedStringIndex = pin?.indexFor(target),
+                autoDetectString = settings.autoDetectString,
+                chromatic = target.chromatic,
+                tuning = target.tuning,
+            ),
             micPermissionGranted = session.permission,
             audioError = session.error,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TunerUiState())
-
-    val libraryState: StateFlow<LibraryState> = combine(
-        repository.customTunings,
-        repository.favoriteIds,
-        repository.selectedTuningId,
-        repository.settings,
-    ) { custom, favoriteIds, selectedId, settings ->
-        val everything = TuningCatalog.presets + custom
-        LibraryState(
-            favorites = everything.filter { it.id in favoriteIds },
-            presetsByFamily = TuningCatalog.presets.groupBy { it.family },
-            customTunings = custom,
-            favoriteIds = favoriteIds,
-            selectedId = selectedId,
-            useFlats = settings.useFlats,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryState())
-
-    init {
-        // Clearing the "already tuned" ticks belongs with whatever changed the
-        // target, so it happens here rather than in each call site.
-        viewModelScope.launch {
-            combine(activeTuning, repository.chromaticMode) { tuning, chromatic ->
-                tuning.id to chromatic
-            }.collect {
-                _tunedStrings.value = emptySet()
-                manualStringIndex.value = null
-            }
-        }
-        viewModelScope.launch {
-            uiState.collect { state ->
-                val reading = state.reading ?: return@collect
-                val index = reading.stringIndex ?: return@collect
-                if (reading.inTune) {
-                    _tunedStrings.value = _tunedStrings.value + index
-                }
-            }
-        }
-    }
+    }.stateIn(viewModelScope, WHILE_OBSERVED, TunerUiState())
 
     // ---- Audio lifecycle -------------------------------------------------
 
     fun startListening() {
-        micPermissionGranted.value = audioEngine.hasPermission()
+        micPermissionGranted.value = pitchSource.hasPermission()
         listening.value = micPermissionGranted.value
     }
 
@@ -205,123 +199,84 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- User actions ----------------------------------------------------
 
-    fun selectTuning(id: String) = viewModelScope.launch { repository.selectTuning(id) }
+    /** Pass null to stop aiming at one string by hand. */
+    fun selectString(index: Int?) {
+        pin.value = index?.let { StringPin(activeTarget.value.key, it) }
+    }
 
     fun setChromaticMode(enabled: Boolean) =
         viewModelScope.launch { repository.setChromaticMode(enabled) }
 
     fun toggleFavorite(id: String) = viewModelScope.launch { repository.toggleFavorite(id) }
 
-    /** Pass null to go back to automatic string detection. */
-    fun selectString(index: Int?) {
-        manualStringIndex.value = index
-    }
-
-    fun clearTunedStrings() {
-        _tunedStrings.value = emptySet()
-    }
-
-    fun setReferencePitch(hz: Double) = viewModelScope.launch { repository.setReferencePitch(hz) }
-
-    fun setUseFlats(value: Boolean) = viewModelScope.launch { repository.setUseFlats(value) }
-
-    fun setAutoDetectString(value: Boolean) = viewModelScope.launch {
-        repository.setAutoDetectString(value)
-        if (value) manualStringIndex.value = null
-    }
-
-    fun setKeepScreenOn(value: Boolean) = viewModelScope.launch { repository.setKeepScreenOn(value) }
-
-    fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { repository.setThemeMode(mode) }
-
-    fun setToleranceCents(cents: Int) = viewModelScope.launch { repository.setToleranceCents(cents) }
-
-    fun setDisplayStyle(style: DisplayStyle) =
-        viewModelScope.launch { repository.setDisplayStyle(style) }
-
-    // ---- Custom tunings --------------------------------------------------
-
-    /** Saves a new tuning when [existingId] is null, otherwise overwrites it. */
-    fun saveCustomTuning(
-        existingId: String?,
-        name: String,
-        family: InstrumentFamily,
-        strings: List<Int>,
-        selectAfterSave: Boolean = true,
-    ) = viewModelScope.launch {
-        val tuning = Tuning(
-            id = existingId ?: "custom_${UUID.randomUUID()}",
-            name = name.trim().ifBlank { "Untitled tuning" },
-            family = family,
-            strings = strings,
-            isCustom = true,
-        )
-        repository.saveCustomTuning(tuning)
-        if (selectAfterSave) repository.selectTuning(tuning.id)
-    }
-
-    fun deleteCustomTuning(id: String) =
-        viewModelScope.launch { repository.deleteCustomTuning(id) }
-
-    fun findTuning(id: String): Tuning? =
-        TuningCatalog.findById(id) ?: libraryState.value.customTunings.firstOrNull { it.id == id }
-
     // ---- Internals -------------------------------------------------------
 
     private data class SessionState(
-        val chromatic: Boolean,
         val permission: Boolean,
         val error: String?,
         val favorites: Set<String>,
     )
 
+    private fun session(): Flow<SessionState> = combine(
+        micPermissionGranted,
+        audioError,
+        repository.favoriteIds,
+    ) { permission, error, favorites -> SessionState(permission, error, favorites) }
+
+    /**
+     * Folds readings into the set of strings already brought into tune.
+     *
+     * [reading] is a state flow, so a fresh collector is handed the reading
+     * that was current *before* the target changed. Dropping it is what makes
+     * the restart actually clear the ticks instead of immediately re-earning
+     * one from a note that is still ringing.
+     */
+    private fun accumulateTunedStrings(): Flow<Set<Int>> =
+        reading.drop(1).scan(emptySet<Int>()) { tuned, reading ->
+            val index = reading?.stringIndex
+            if (reading != null && reading.inTune && index != null) tuned + index else tuned
+        }
+
     private fun resolve(
         pitch: TrackedPitch,
         settings: UserSettings,
-        tuning: Tuning,
-        chromatic: Boolean,
-        manual: Int?,
+        target: Target,
+        pin: StringPin?,
     ): TuningReading {
-        val a4 = settings.referencePitchHz
-
-        if (chromatic) {
-            val note = Notes.nearest(pitch.frequencyHz, a4)
-            return TuningReading(
-                frequencyHz = pitch.frequencyHz,
-                targetMidi = note.midi,
-                cents = note.cents,
-                clarity = pitch.clarity,
-                levelDbfs = pitch.levelDbfs,
-                stringIndex = null,
-                inTune = abs(note.cents) <= settings.toleranceCents,
-            )
-        }
-
-        // Either the user pinned a string, or we take the one whose target is
-        // fewest cents away from what is being played.
-        val index = manual?.takeIf { it in tuning.strings.indices }
-            ?: tuning.strings.indices.minByOrNull { i ->
-                abs(Notes.centsBetween(pitch.frequencyHz, tuning.strings[i], a4))
-            }
-            ?: 0
-
-        val targetMidi = tuning.strings[index]
-        val cents = Notes.centsBetween(pitch.frequencyHz, targetMidi, a4)
+        val resolved = TuningResolver.resolve(
+            frequencyHz = pitch.frequencyHz,
+            tuning = target.tuning,
+            chromatic = target.chromatic,
+            pinnedStringIndex = pin?.indexFor(target),
+            autoDetectString = settings.autoDetectString,
+            referencePitchHz = settings.referencePitchHz,
+            toleranceCents = settings.toleranceCents,
+        )
         return TuningReading(
             frequencyHz = pitch.frequencyHz,
-            targetMidi = targetMidi,
-            cents = cents,
+            targetMidi = resolved.targetMidi,
+            cents = resolved.cents,
             clarity = pitch.clarity,
             levelDbfs = pitch.levelDbfs,
-            stringIndex = index,
-            inTune = abs(cents) <= settings.toleranceCents,
+            stringIndex = resolved.stringIndex,
+            inTune = resolved.inTune,
         )
     }
 
     companion object {
+        private const val CHROMATIC_KEY = "\u0000chromatic"
+
+        /**
+         * Keeps the graph alive briefly across a configuration change, then lets
+         * it go. Nothing inside this class subscribes, so this means what it
+         * says: no UI, no work.
+         */
+        private val WHILE_OBSERVED = SharingStarted.WhileSubscribed(5_000)
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                TunerViewModel(checkNotNull(this[APPLICATION_KEY]))
+                val container = appContainer()
+                TunerViewModel(container.repository, container.pitchSource)
             }
         }
     }
