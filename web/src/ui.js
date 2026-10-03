@@ -114,19 +114,27 @@ export function appBar({ title, subtitle, leading, actions = [] }) {
   ]);
 }
 
-/** A two-or-more-way segmented choice, as Material's SingleChoiceSegmentedButtonRow. */
+/**
+ * A two-or-more-way segmented choice, as Material's
+ * SingleChoiceSegmentedButtonRow — including the tick that marks the selected
+ * option, which is what tells the row apart from a pair of plain buttons.
+ */
 export function segmented(options, selected, onSelect, label) {
   return el(
     'div',
     { class: 'segmented', role: 'group', 'aria-label': label },
-    options.map((option) =>
-      el('button', {
-        type: 'button',
-        text: option.label,
-        'aria-pressed': String(option.value === selected),
-        onClick: () => onSelect(option.value),
-      }),
-    ),
+    options.map((option) => {
+      const isSelected = option.value === selected;
+      return el(
+        'button',
+        {
+          type: 'button',
+          'aria-pressed': String(isSelected),
+          onClick: () => onSelect(option.value),
+        },
+        [isSelected ? icon('check', 'icon--sm') : null, el('span', { text: option.label })],
+      );
+    }),
   );
 }
 

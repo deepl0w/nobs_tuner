@@ -16,8 +16,8 @@
   --surface-variant: #EDE1CF;
   --on-surface-variant: #4E4639;
   --outline: #807667;
-  --error-container: #F9DEDC;
-  --on-error-container: #410E0B;
+  --error-container: #FFDAD6;
+  --on-error-container: #410002;
 
   --in-tune: #1B7A3D;
   --close: #B07400;
@@ -57,8 +57,8 @@
     --surface-variant: #4E4639;
     --on-surface-variant: #D1C5B4;
     --outline: #9A9080;
-    --error-container: #8C1D18;
-    --on-error-container: #F9DEDC;
+    --error-container: #93000A;
+    --on-error-container: #FFDAD6;
 
     --in-tune: #6FD894;
     --close: #F0C048;
@@ -86,8 +86,8 @@
   --surface-variant: #4E4639;
   --on-surface-variant: #D1C5B4;
   --outline: #9A9080;
-  --error-container: #8C1D18;
-  --on-error-container: #F9DEDC;
+  --error-container: #93000A;
+  --on-error-container: #FFDAD6;
   --in-tune: #6FD894;
   --close: #F0C048;
   --off: #F2846C;
@@ -99,6 +99,10 @@
 }
 
 * { box-sizing: border-box; }
+
+/* `hidden` is a presentation hint, so any `display` rule with a class selector
+   beats it. Several components here set one, so make it stick. */
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;
@@ -200,6 +204,7 @@ body {
 
 .icon--lg { width: 30px; height: 30px; }
 .icon--md { width: 26px; height: 26px; }
+.icon--sm { width: 18px; height: 18px; }
 
 /* ---- Buttons ---------------------------------------------------------- */
 
@@ -604,7 +609,11 @@ button {
 .string-chip.is-active .string-chip__note { font-weight: 700; }
 .string-chip__octave { font-size: 11px; color: var(--on-surface-variant); }
 
-.string-chip__tick {
+/* Only on a string the player has already brought into tune. */
+.string-chip__tick { display: none; }
+
+.string-chip.is-tuned .string-chip__tick {
+  display: block;
   position: absolute;
   top: 4px;
   right: 4px;
@@ -903,3 +912,24 @@ dialog h2 { margin: 0 0 12px; font-size: 24px; font-weight: 400; }
 .tuner__notice { width: 100%; }
 
 .app-bar__instrument { color: var(--primary); }
+
+/*
+ * Utilities, kept deliberately few.
+ *
+ * They exist because the page forbids inline style attributes in its
+ * Content-Security-Policy: a one-off margin has to be a class or it does not
+ * apply at all. Anything genuinely dynamic is set through the CSSOM instead,
+ * which the policy does allow.
+ */
+.u-row { display: flex; align-items: center; gap: 16px; }
+.u-grow { flex: 1; min-width: 0; }
+.u-spacer { flex: 1; }
+.u-inset { padding: 0 16px; }
+.u-spaced { margin: 12px 0; }
+.u-flush { margin: 0; }
+.u-tight { margin: 4px 0; }
+.u-accent { color: var(--primary); }
+.u-install { margin-top: 12px; align-self: flex-start; }
+.u-picker-label { margin: 12px 0 4px; }
+
+.editor__strings { width: 100%; }

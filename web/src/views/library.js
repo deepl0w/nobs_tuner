@@ -90,9 +90,9 @@ export function libraryView(app) {
           onClick: () => app.selectTuning(tuning.id),
         },
         [
-          el('div', { style: 'display:flex;align-items:center;gap:16px' }, [
+          el('div', { class: 'u-row' }, [
             svgIcon(INSTRUMENT_ICONS[tuning.family], 'icon--md tuning-row__icon'),
-            el('div', { style: 'min-width:0;flex:1' }, [
+            el('div', { class: 'u-grow' }, [
               el('div', { class: 'tuning-row__name', text: tuning.name }),
               el('div', { class: 'tuning-row__notes body-small', text: tuning.detailedSummary }),
             ]),
@@ -126,7 +126,7 @@ export function libraryView(app) {
   function sectionHeader(title) {
     return el('div', {}, [
       el('hr', { class: 'divider' }),
-      el('h2', { class: 'section-title', style: 'padding:0 16px', text: title }),
+      el('h2', { class: 'section-title u-inset', text: title }),
     ]);
   }
 

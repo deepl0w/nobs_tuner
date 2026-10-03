@@ -142,17 +142,14 @@ fun resolve(
     )
 }
 
-// Equal-temperament note maths, with A4 wherever the user has put it. Flat
-// top-level functions rather than an object, because Kotlin exports an object
-// as a `getInstance()` factory and the extra hop reads badly from JavaScript.
-
-/** Lowest MIDI note the app will display or let you pick: C0, ~16.35 Hz. */
-val minMidi: Int = Notes.MIN_MIDI
-
-/** Highest MIDI note the app will display or let you pick: C8, ~4186 Hz. */
-val maxMidi: Int = Notes.MAX_MIDI
-
-val defaultA4Hz: Double = Notes.DEFAULT_A4_HZ
+// Equal-temperament note maths, with A4 wherever the user has put it.
+//
+// Flat top-level functions rather than an object, because Kotlin exports an
+// object as a `getInstance()` factory and the extra hop reads badly from
+// JavaScript. Constants are not exported at all: a top-level `val` arrives in
+// JavaScript as `{ get(): number }` rather than a number, so `x === core.limit`
+// silently compares a number with an object and is quietly always false. The
+// limits go through `defaultsJson()` instead, where they are plain numbers.
 
 /** Full scientific name, e.g. "A4" or "Eb3". */
 fun noteName(midi: Int, useFlats: Boolean): String = Notes.name(midi, useFlats)
@@ -217,6 +214,8 @@ fun defaultsJson(): String {
         field("maxReferencePitchHz", UserSettings.REFERENCE_PITCH_RANGE.endInclusive).append(',')
         field("minToleranceCents", UserSettings.TOLERANCE_RANGE.first).append(',')
         field("maxToleranceCents", UserSettings.TOLERANCE_RANGE.last).append(',')
+        field("minMidi", Notes.MIN_MIDI).append(',')
+        field("maxMidi", Notes.MAX_MIDI).append(',')
         field("defaultTuningId", TuningCatalog.default.id)
         append('}')
     }

@@ -56,8 +56,13 @@ class Spring {
     this.velocity = 0;
   }
 
+  /** True once the spring has stopped moving in any way a pixel would show. */
+  get settled() {
+    return Math.abs(this.value - this.target) < 0.02 && Math.abs(this.velocity) < 0.02;
+  }
+
   advance(seconds) {
-    if (reduceMotion.matches) {
+    if (reduceMotion.matches || this.settled) {
       this.snapTo(this.target);
       return this.value;
     }
@@ -82,9 +87,15 @@ class ColorFade {
     this.target = null;
   }
 
+  get settled() {
+    return this.progress === undefined || this.progress >= 1;
+  }
+
   advance(target, seconds) {
     if (!this.current || reduceMotion.matches) {
       this.current = target;
+      this.target = target;
+      this.progress = 1;
       return this.current;
     }
     if (target !== this.target) {
@@ -169,6 +180,7 @@ export class Meter {
 
   /** Re-reads the palette; call after the theme changes. */
   readColors() {
+    this.requestDraw();
     const computed = getComputedStyle(document.documentElement);
     const value = (name) => computed.getPropertyValue(name).trim();
     this.colors = {
@@ -187,6 +199,7 @@ export class Meter {
     if (style === this.style) return;
     this.style = style;
     this.applyStyle();
+    this.requestDraw();
   }
 
   applyStyle() {
@@ -197,6 +210,7 @@ export class Meter {
 
   setTolerance(cents) {
     this.toleranceCents = cents;
+    this.requestDraw();
   }
 
   /** Pass null when nothing is being heard. */
@@ -212,6 +226,7 @@ export class Meter {
       this.digitalValue.style.color =
         cents === null ? this.colors.idle : this.fade.current || this.colors.idle;
     }
+    this.requestDraw();
   }
 
   resize() {
@@ -225,22 +240,47 @@ export class Meter {
     this.context.setTransform(ratio, 0, 0, ratio, 0, 0);
     this.width = width;
     this.height = height;
+    this.requestDraw();
   }
 
   start() {
-    if (this.frame) return;
+    this.running = true;
     this.readColors();
+    this.requestDraw();
+  }
+
+  /**
+   * Draws the next frame, and keeps drawing only while something is moving.
+   *
+   * A tuner spends most of its life showing a note that is not changing, or no
+   * note at all. A loop that ran regardless would hold the display awake and
+   * the battery draining to redraw an identical frame sixty times a second, so
+   * it stops once the spring has settled, the colour has arrived and no strobe
+   * is drifting — and anything that changes the picture starts it again.
+   */
+  requestDraw() {
+    if (!this.running || this.frame) return;
     this.lastFrame = 0;
     const tick = (now) => {
-      this.frame = requestAnimationFrame(tick);
       const seconds = this.lastFrame ? Math.min((now - this.lastFrame) / 1000, 0.1) : 0;
       this.lastFrame = now;
       this.draw(seconds);
+      this.frame = this.keepAnimating() ? requestAnimationFrame(tick) : 0;
     };
     this.frame = requestAnimationFrame(tick);
   }
 
+  keepAnimating() {
+    // A strobe drifts for as long as the note is off, which is the whole point
+    // of it; it is the one style that moves while nothing else changes.
+    if (this.style === 'STROBE' && this.cents !== null && Math.abs(this.cents) > 0.01) {
+      return true;
+    }
+    return !this.position.settled || !this.fade.settled;
+  }
+
   stop() {
+    this.running = false;
     cancelAnimationFrame(this.frame);
     this.frame = 0;
   }

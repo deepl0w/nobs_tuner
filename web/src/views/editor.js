@@ -6,7 +6,7 @@ const MIN_STRINGS = 1;
 const MAX_STRINGS = 12;
 
 export function editorView(app, { editId, seedId }) {
-  const { core, settings } = app;
+  const { core, settings, defaults } = app;
   const existing = editId ? app.findTuning(editId) : null;
   const seed = seedId ? app.findTuning(seedId) : null;
   const template = existing || seed;
@@ -15,7 +15,7 @@ export function editorView(app, { editId, seedId }) {
   let strings = (template ? template.strings : app.familySeed(family)).slice();
   let name = existing ? existing.name : seed ? `${seed.name} copy` : '';
 
-  const stringList = el('div', { class: 'editor__strings', style: 'width:100%' });
+  const stringList = el('div', { class: 'editor__strings' });
 
   function save() {
     app.saveCustomTuning({ existingId: existing ? existing.id : null, name, family, strings });
@@ -62,7 +62,7 @@ export function editorView(app, { editId, seedId }) {
   }, { class: 'icon-button--tonal' });
   const addButton = iconButton('add', 'Add a string', () => {
     const last = strings.length ? strings[strings.length - 1] : 40;
-    strings = [...strings, Math.min(last + 5, core.maxMidi)];
+    strings = [...strings, Math.min(last + 5, defaults.maxMidi)];
     rebuild();
   }, { class: 'icon-button--tonal' });
 
@@ -77,7 +77,7 @@ export function editorView(app, { editId, seedId }) {
   function stringRow(midi, index) {
     const nudge = (delta) => {
       strings = strings.map((value, i) =>
-        i === index ? Math.max(core.minMidi, Math.min(core.maxMidi, value + delta)) : value,
+        i === index ? Math.max(defaults.minMidi, Math.min(defaults.maxMidi, value + delta)) : value,
       );
       rebuild();
     };
@@ -96,10 +96,10 @@ export function editorView(app, { editId, seedId }) {
       }),
       el('span', { class: 'string-row__spacer' }),
       iconButton('arrowDown', 'Lower by a semitone', () => nudge(-1), {
-        disabled: midi <= core.minMidi,
+        disabled: midi <= defaults.minMidi,
       }),
       iconButton('arrowUp', 'Raise by a semitone', () => nudge(1), {
-        disabled: midi >= core.maxMidi,
+        disabled: midi >= defaults.maxMidi,
       }),
     ]);
   }
@@ -126,7 +126,7 @@ export function editorView(app, { editId, seedId }) {
     let pitchClass = ((strings[index] % 12) + 12) % 12;
     let octave = core.noteOctave(strings[index]);
 
-    const preview = el('p', { class: 'body-medium', style: 'color:var(--primary)' });
+    const preview = el('p', { class: 'body-medium u-accent' });
     const pitchRow = el('div', { class: 'chip-row', role: 'group', 'aria-label': 'Note' });
     const octaveRow = el('div', { class: 'chip-row', role: 'group', 'aria-label': 'Octave' });
     const setButton = el('button', {
@@ -144,7 +144,7 @@ export function editorView(app, { editId, seedId }) {
 
     function refresh() {
       const midi = midiOf();
-      const valid = midi >= core.minMidi && midi <= core.maxMidi;
+      const valid = midi >= defaults.minMidi && midi <= defaults.maxMidi;
       setButton.disabled = !valid;
       preview.textContent = valid
         ? `${core.noteName(midi, settings.useFlats)} · ${core.noteFrequency(midi, settings.referencePitchHz).toFixed(2)} Hz`
@@ -168,7 +168,7 @@ export function editorView(app, { editId, seedId }) {
             type: 'button',
             text: String(value),
             'aria-pressed': String(value === octave),
-            disabled: candidate < core.minMidi || candidate > core.maxMidi,
+            disabled: candidate < defaults.minMidi || candidate > defaults.maxMidi,
             onClick: () => { octave = value; refresh(); },
           });
         }),
@@ -179,7 +179,7 @@ export function editorView(app, { editId, seedId }) {
     dialog.replaceChildren(
       el('h2', { text: 'Choose a note' }),
       pitchRow,
-      el('p', { class: 'label-medium', style: 'margin:12px 0 4px', text: 'Octave' }),
+      el('p', { class: 'label-medium u-picker-label', text: 'Octave' }),
       octaveRow,
       preview,
       el('div', { class: 'dialog__actions' }, [

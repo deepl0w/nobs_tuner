@@ -7,6 +7,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nobs Tuner</title>
 <meta name="description" content="A chromatic and preset-based tuner for guitar, bass, ukulele, banjo, mandolin and orchestral strings. Everything happens on your device.">
+<!--
+  The privacy claim, made enforceable. Everything the page may load comes from
+  its own origin, `connect-src 'self'` means no XHR, fetch, WebSocket or beacon
+  can reach anywhere else, and with no inline script or style permitted there is
+  nowhere for an injected one to run. A reader does not have to take the claim on
+  trust: this header is what the browser enforces, and DevTools shows the
+  requests that were actually made.
+
+  `frame-ancestors` is absent on purpose: a browser ignores it in a <meta>
+  element, and a static host does not let us send real headers. Framing is not
+  a risk worth a directive that does nothing.
+-->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self';
+  style-src 'self';
+  img-src 'self';
+  font-src 'self';
+  media-src 'self';
+  connect-src 'self';
+  worker-src 'self';
+  manifest-src 'self';
+  base-uri 'none';
+  form-action 'none';
+  object-src 'none'">
 <meta name="color-scheme" content="light dark">
 <!-- Replaced at runtime to match the resolved theme; this is the dark value
      because a standalone launch most often lands on a dark splash. -->

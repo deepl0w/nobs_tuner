@@ -24,6 +24,20 @@ export function balancedRows(count, maxPerRow) {
   return Array.from({ length: rows }, (_, index) => base + (index < remainder ? 1 : 0));
 }
 
+/**
+ * Widest the dial may be before it stops fitting the height it has.
+ *
+ * Beside the controls rather than above them, the limit comes from the height,
+ * not the width: each style has its own width-to-height ratio, and the readout
+ * underneath needs its own room. Ported from TunerScreen.kt's `meterWidthFor`.
+ */
+function meterWidthFor(shape, style) {
+  const READOUT_SPACE = 150;
+  const ratio = { NEEDLE: 1.85, BAR: 3.4, STROBE: 2.6, DIGITAL: 2.2 }[style];
+  const fromHeight = (shape.height - READOUT_SPACE) * ratio;
+  return Math.max(160, Math.min(shape.readingMaxWidth, fromHeight));
+}
+
 export function tunerView(app) {
   const { core, state, settings, tuning, shape } = app;
   const chromatic = state.chromaticMode;
@@ -60,6 +74,9 @@ export function tunerView(app) {
   // ---- Meter -----------------------------------------------------------
 
   const meterBox = el('div', { class: 'meter-box' });
+  if (shape.prefersSideBySide) {
+    meterBox.style.maxWidth = `${meterWidthFor(shape, settings.displayStyle)}px`;
+  }
   const meter = new Meter(meterBox);
   meter.setStyle(settings.displayStyle);
   meter.setTolerance(settings.toleranceCents);
@@ -101,7 +118,6 @@ export function tunerView(app) {
           {
             class: 'string-chip',
             type: 'button',
-            style: `width:${size}px;height:${size}px`,
             onClick: () =>
               app.selectString(stringIndex === state.manualStringIndex ? null : stringIndex),
           },
@@ -111,6 +127,9 @@ export function tunerView(app) {
             icon('check', 'string-chip__tick'),
           ],
         );
+        // Set through the CSSOM rather than a style attribute, which the
+        // page's Content-Security-Policy forbids.
+        chip.style.width = chip.style.height = `${size}px`;
         chip.dataset.index = String(stringIndex);
         chip.dataset.label = `String ${tuning.strings.length - stringIndex}, ${name}${octave}`;
         chips.push(chip);
@@ -139,7 +158,7 @@ export function tunerView(app) {
           : 'Try again';
     notice.append(
       el('div', { class: 'notice', role: 'alert' }, [
-        el('p', { class: 'body-medium', text: micMessage, style: 'margin:0' }),
+        el('p', { class: 'body-medium u-flush', text: micMessage }),
         micState === MicState.UNAVAILABLE
           ? null
           : el('button', { class: 'button', type: 'button', text: action, onClick: app.startListening }),

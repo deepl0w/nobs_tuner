@@ -3,7 +3,7 @@
 import { el, iconButton, appBar, segmented } from '../ui.js';
 
 export function settingsView(app) {
-  const { core, settings, defaults } = app;
+  const { settings, defaults } = app;
 
   function setting(title, subtitle, control) {
     return el('div', { class: 'setting' }, [
@@ -47,7 +47,7 @@ export function settingsView(app) {
     class: 'button button--text',
     type: 'button',
     text: 'Reset',
-    onClick: () => setPitch(core.defaultA4Hz),
+    onClick: () => setPitch(defaults.referencePitchHz),
   });
 
   function setPitch(hzValue) {
@@ -59,7 +59,7 @@ export function settingsView(app) {
     pitchValue.textContent = `${Math.round(clamped)} Hz`;
     lower.disabled = clamped <= defaults.minReferencePitchHz;
     raise.disabled = clamped >= defaults.maxReferencePitchHz;
-    reset.hidden = clamped === core.defaultA4Hz;
+    reset.hidden = clamped === defaults.referencePitchHz;
   }
 
   const step = (delta) => setPitch(app.settings.referencePitchHz + delta);
@@ -71,7 +71,7 @@ export function settingsView(app) {
       lower,
       pitchValue,
       raise,
-      el('span', { style: 'flex:1' }),
+      el('span', { class: 'u-spacer' }),
       reset,
     ]),
   );
@@ -157,7 +157,7 @@ export function settingsView(app) {
           ),
         ),
 
-        el('hr', { class: 'divider', style: 'margin:12px 0' }),
+        el('hr', { class: 'divider u-spaced' }),
         el('h2', { class: 'section-title', text: 'Tuner' }),
         toggle(
           'Detect string automatically',
@@ -177,7 +177,7 @@ export function settingsView(app) {
           styleChips,
         ]),
 
-        el('hr', { class: 'divider', style: 'margin:12px 0' }),
+        el('hr', { class: 'divider u-spaced' }),
         el('h2', { class: 'section-title', text: 'Appearance' }),
         setting(
           'Theme',
@@ -194,9 +194,9 @@ export function settingsView(app) {
           ),
         ),
 
-        el('hr', { class: 'divider', style: 'margin:12px 0' }),
+        el('hr', { class: 'divider u-spaced' }),
         el('h2', { class: 'section-title', text: 'About' }),
-        el('p', { class: 'body-medium', style: 'margin:4px 0', text: `Nobs Tuner ${app.version}` }),
+        el('p', { class: 'body-medium u-tight', text: `Nobs Tuner ${app.version}` }),
         el('p', {
           class: 'body-small',
           text:
@@ -205,9 +205,8 @@ export function settingsView(app) {
         }),
         app.installPrompt
           ? el('button', {
-            class: 'button',
+            class: 'button u-install',
             type: 'button',
-            style: 'margin-top:12px;align-self:flex-start',
             text: 'Install Nobs Tuner',
             onClick: app.install,
           })
