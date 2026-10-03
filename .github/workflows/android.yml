@@ -72,13 +72,20 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # The secrets context is not available in an `if:`, so the absence of a
+      # keystore is handled in the shell instead. Without one the bundle still
+      # builds, unsigned, which is what a fork's pull request should get.
       - name: Decode upload keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
-          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+            echo "Upload keystore decoded; the bundle will be signed."
+          else
+            echo "No ANDROID_KEYSTORE_BASE64 secret set — the bundle will be unsigned."
+          fi
 
       - name: Build bundle
         env:

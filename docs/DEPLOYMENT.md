@@ -6,19 +6,20 @@ needs anything run by hand.
 
 ## Repository access
 
-The remote is `git@github.com:deepl0w/nobs_tuner.git`.
+The remote is `git@github.com-deepl0w:deepl0w/nobs_tuner.git`.
 
-Pushing needs an account with write access to **`deepl0w`**. A machine
-authenticated as a different GitHub account gets `pull: true, push: false` and
-the push is refused with "Permission denied", which reads like a missing key but
-is not — check with:
+`github.com-deepl0w` is an SSH host alias, not a hostname — it points at
+github.com with the key for the `deepl0w` account. Using plain `github.com` on a
+machine that holds several GitHub identities authenticates as whichever key SSH
+offers first, and if that account only has read access the push fails with
+"Permission denied", which reads like a missing key rather than the wrong one.
+
+Check which account an alias authenticates as before trusting it:
 
 ```bash
+ssh -T git@github.com-deepl0w        # "Hi deepl0w!"
 gh api repos/deepl0w/nobs_tuner --jq '.permissions'
 ```
-
-Fix it by adding that account as a collaborator with write access, or by
-authenticating the machine as `deepl0w`.
 
 ## Turning on Pages
 
