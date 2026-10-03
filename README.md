@@ -114,6 +114,11 @@ microphone, keeping up with the stream, and releasing it cleanly:
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
+## How it is put together
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layers, the path a note
+takes from the microphone to the needle, and the decisions behind both.
+
 ## Publishing
 
 See [docs/PLAY_STORE.md](docs/PLAY_STORE.md) for signing, the release checklist

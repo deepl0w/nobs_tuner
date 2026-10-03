@@ -64,6 +64,26 @@ object PitchTargeting {
         )
     }
 
+    /**
+     * The index the string selector should show as chosen.
+     *
+     * With automatic detection off and nothing pinned the reading targets the
+     * first string, so the selector has to say so — otherwise switching the
+     * setting off leaves the selector blank while the tuner quietly aims at a
+     * string the player never picked.
+     */
+    fun effectivePinnedIndex(
+        manualIndex: Int?,
+        autoDetect: Boolean,
+        chromatic: Boolean,
+        tuning: Tuning,
+    ): Int? = when {
+        chromatic || tuning.strings.isEmpty() -> null
+        manualIndex != null && manualIndex in tuning.strings.indices -> manualIndex
+        autoDetect -> null
+        else -> 0
+    }
+
     /** Resolves a reading against one string of [tuning]. */
     fun resolveAgainstTuning(
         frequencyHz: Double,
@@ -75,6 +95,12 @@ object PitchTargeting {
         manualIndex: Int?,
         autoDetect: Boolean,
     ): TuningReading {
+        // A tuning with no strings has nothing to aim at; falling back to the
+        // chromatic reading keeps the display meaningful instead of indexing an
+        // empty list.
+        if (tuning.strings.isEmpty()) {
+            return resolveChromatic(frequencyHz, clarity, levelDbfs, a4Hz, toleranceCents)
+        }
         val index = stringIndexFor(frequencyHz, tuning, a4Hz, manualIndex, autoDetect)
         val targetMidi = tuning.strings[index]
         val cents = Notes.centsBetween(frequencyHz, targetMidi, a4Hz)

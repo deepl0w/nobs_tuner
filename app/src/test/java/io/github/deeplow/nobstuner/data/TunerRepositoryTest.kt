@@ -45,7 +45,7 @@ class TunerRepositoryTest {
         val store = PreferenceDataStoreFactory.create(scope = scope) {
             folder.newFile("test.preferences_pb")
         }
-        repository = TunerRepository(store)
+        repository = DataStoreTunerRepository(store)
     }
 
     @After

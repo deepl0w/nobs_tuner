@@ -179,4 +179,76 @@ class PitchTargetingTest {
             }
         }
     }
+
+    // ---- What the string selector shows as chosen ------------------------
+
+    @Test
+    fun `selector shows nothing chosen while detection is on`() {
+        assertNull(
+            PitchTargeting.effectivePinnedIndex(
+                manualIndex = null,
+                autoDetect = true,
+                chromatic = false,
+                tuning = standard,
+            ),
+        )
+    }
+
+    @Test
+    fun `selector falls back to the first string when detection is off`() {
+        assertEquals(
+            0,
+            PitchTargeting.effectivePinnedIndex(
+                manualIndex = null,
+                autoDetect = false,
+                chromatic = false,
+                tuning = standard,
+            ),
+        )
+    }
+
+    @Test
+    fun `selector shows the pin when there is one`() {
+        assertEquals(
+            4,
+            PitchTargeting.effectivePinnedIndex(
+                manualIndex = 4,
+                autoDetect = true,
+                chromatic = false,
+                tuning = standard,
+            ),
+        )
+    }
+
+    @Test
+    fun `selector shows nothing in chromatic mode`() {
+        assertNull(
+            PitchTargeting.effectivePinnedIndex(
+                manualIndex = 2,
+                autoDetect = false,
+                chromatic = true,
+                tuning = standard,
+            ),
+        )
+    }
+
+    // ---- Degenerate input ------------------------------------------------
+
+    @Test
+    fun `a tuning with no strings falls back to the chromatic reading`() {
+        val empty = Tuning("empty", "Empty", InstrumentFamily.OTHER, emptyList())
+        val reading = PitchTargeting.resolveAgainstTuning(
+            frequencyHz = Notes.frequencyOf(69),
+            clarity = 1.0,
+            levelDbfs = -20.0,
+            tuning = empty,
+            a4Hz = Notes.DEFAULT_A4_HZ,
+            toleranceCents = 5,
+            manualIndex = null,
+            autoDetect = true,
+        )
+        assertEquals(69, reading.targetMidi)
+        assertNull(reading.stringIndex)
+    }
+
 }
