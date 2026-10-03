@@ -2,7 +2,6 @@ package io.github.deeplow.nobstuner.audio
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 /**
@@ -35,17 +34,6 @@ class PitchSmootherOctaveTest {
         assertEquals("the octave artifact was not folded back", 82.41, tracked, 2.0)
     }
 
-    @Ignore(
-        "LIVE BUG: peakLevelDbfs is the loudest level since the last release, not " +
-            "the peak of the note being tracked, so a quieter note that follows a " +
-            "louder one reads as that louder one decaying forever. The fold-limit " +
-            "escape is gated on !decaying, so it never fires and the reading stays " +
-            "an octave (or two) below the string being played until a full silent " +
-            "release. Giving the peak a release fixes this but regresses " +
-            "RealRecordingPitchTest's cello run, which folds a genuine artifact only " +
-            "because the stale peak makes `decaying` true. Needs a real fix, not a " +
-            "release constant."
-    )
     @Test
     fun `moving to a quieter string an octave up is followed, not folded`() {
         val smoother = PitchSmoother()
@@ -55,17 +43,6 @@ class PitchSmootherOctaveTest {
         assertEquals("stuck an octave below the string being played", 440.0, tracked, 10.0)
     }
 
-    @Ignore(
-        "LIVE BUG: peakLevelDbfs is the loudest level since the last release, not " +
-            "the peak of the note being tracked, so a quieter note that follows a " +
-            "louder one reads as that louder one decaying forever. The fold-limit " +
-            "escape is gated on !decaying, so it never fires and the reading stays " +
-            "an octave (or two) below the string being played until a full silent " +
-            "release. Giving the peak a release fixes this but regresses " +
-            "RealRecordingPitchTest's cello run, which folds a genuine artifact only " +
-            "because the stale peak makes `decaying` true. Needs a real fix, not a " +
-            "release constant."
-    )
     @Test
     fun `moving two octaves up at a lower level is followed`() {
         // Guitar: a hard-plucked low E, then the high E picked softly. Exactly
@@ -76,17 +53,6 @@ class PitchSmootherOctaveTest {
         assertEquals("stuck two octaves below the string being played", 329.63, tracked, 8.0)
     }
 
-    @Ignore(
-        "LIVE BUG: peakLevelDbfs is the loudest level since the last release, not " +
-            "the peak of the note being tracked, so a quieter note that follows a " +
-            "louder one reads as that louder one decaying forever. The fold-limit " +
-            "escape is gated on !decaying, so it never fires and the reading stays " +
-            "an octave (or two) below the string being played until a full silent " +
-            "release. Giving the peak a release fixes this but regresses " +
-            "RealRecordingPitchTest's cello run, which folds a genuine artifact only " +
-            "because the stale peak makes `decaying` true. Needs a real fix, not a " +
-            "release constant."
-    )
     @Test
     fun `a brief gap between plucks does not strand the reading an octave down`() {
         val smoother = PitchSmoother()
