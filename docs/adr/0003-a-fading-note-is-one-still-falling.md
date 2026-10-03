@@ -5,7 +5,7 @@
 
 ## Context
 
-[`PitchSmoother`](../../app/src/main/java/io/github/deeplow/nobstuner/audio/PitchSmoother.kt)
+[`PitchSmoother`](../../core/src/commonMain/kotlin/io/github/deeplow/nobstuner/audio/PitchSmoother.kt)
 folds octave jumps back to where a note was, because as a plucked or bowed note
 dies its fundamental fades before its partials and the detector starts hearing
 the octave above. Without the fold, the display jumps an octave exactly as the
