@@ -64,6 +64,35 @@ Scope creep that lands in someone else's merge is expensive.
 **main** — the user's checkout. Does its own work, and owns integration: see
 *Integrating* below.
 
+## The review cycle
+
+Work landing in `main` is the event the fleet turns on. Nobody discovers it by
+accident: **when main merges anything, it tells every worktree**, and the first
+thing each does is `.claude/scripts/fleet.sh sync`. Reviewing a change against a
+branch that predates it wastes the review.
+
+Once synced, each role has a standing job on whatever just changed — it does not
+need to be asked:
+
+- **tester** — read the diff. Does the new code have tests, and are they the
+  tests that would have caught the defect it fixes? Try to break it. Anything you
+  find goes back to main as a **finding**, whether or not you fix it: a failing
+  test you have pinned, or a description precise enough for someone else to pin.
+- **architect** — read the diff. Does it still make sense against the records in
+  `docs/adr/`, and does it contradict one without saying so? A change that
+  narrows or supersedes a decision needs a record; a change that quietly
+  undermines one is the finding.
+
+A finding is reported twice over: in `.claude/handoff.md` so it survives you, and
+as a message to main so it arrives while main can still act on it. Say what you
+found, where, and what you did about it. "Nothing to report" is a useful answer
+and worth sending — silence is indistinguishable from not having looked.
+
+Main collects findings, acts on the ones that block, and integrates the branches
+at the end. The order is deliberate: review first against a synced tree, merge
+afterwards, so main is merging work that has already been read by someone other
+than its author.
+
 ## Commits
 
 Write the message the repository already uses: a single imperative line that says

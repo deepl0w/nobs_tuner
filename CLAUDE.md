@@ -20,6 +20,13 @@ If you are in a worktree:
 
 The main agent merges those branches with `/integrate`, runs the suite, and pushes.
 
+When main merges anything it tells every worktree, and each syncs before doing
+anything else. A tester then checks whether the change is tested and tries to
+break it; an architect checks whether it still agrees with `docs/adr/`. Both
+report what they found back to main — including finding nothing — and main
+integrates at the end. The cycle is in the `fleet` skill under *The review
+cycle*.
+
 `.claude/scripts/fleet.sh brief` prints where you are and where your branch
 stands — the SessionStart hook runs it for you. The protocol in full, including
 what each role may change, is in `.claude/skills/fleet/SKILL.md`; commands are
