@@ -21,5 +21,10 @@ captures/
 # Downloaded test recordings (see tools/fetch-test-audio.sh)
 app/src/test/resources/realaudio/
 
-# Claude Code session state
-.claude/
+# Claude Code: the agent configuration is version-controlled so every worktree
+# gets it; session state, worktrees and per-worktree role notes are not.
+.claude/*
+!.claude/settings.json
+!.claude/scripts/
+!.claude/skills/
+!.claude/commands/
