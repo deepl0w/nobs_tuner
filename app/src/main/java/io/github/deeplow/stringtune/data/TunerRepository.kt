@@ -15,6 +15,7 @@ import io.github.deeplow.stringtune.model.Tuning
 import io.github.deeplow.stringtune.model.TuningCatalog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import java.io.IOException
@@ -28,10 +29,16 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
  * Custom tunings are stored as a JSON blob in one preference key rather than in
  * a database. There are tens of them at most, they are always read and written
  * whole, and this keeps the app free of a schema to migrate.
+ *
+ * Every exposed flow drops repeats. DataStore republishes the whole preference
+ * snapshot on each write, so without that a change to, say, the tolerance would
+ * re-emit from all of them and anything downstream would treat it as news.
  */
-class TunerRepository(context: Context) {
+class TunerRepository internal constructor(
+    private val dataStore: DataStore<Preferences>,
+) {
 
-    private val dataStore = context.applicationContext.dataStore
+    constructor(context: Context) : this(context.applicationContext.dataStore)
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -74,23 +81,23 @@ class TunerRepository(context: Context) {
                 ?.coerceIn(UserSettings.TOLERANCE_RANGE)
                 ?: defaults.toleranceCents,
         )
-    }
+    }.distinctUntilChanged()
 
     val customTunings: Flow<List<Tuning>> = preferences.map { prefs ->
         decodeCustomTunings(prefs[Keys.customTunings])
-    }
+    }.distinctUntilChanged()
 
     val favoriteIds: Flow<Set<String>> = preferences.map { prefs ->
         prefs[Keys.favorites] ?: emptySet()
-    }
+    }.distinctUntilChanged()
 
     val selectedTuningId: Flow<String> = preferences.map { prefs ->
         prefs[Keys.selectedTuning] ?: TuningCatalog.default.id
-    }
+    }.distinctUntilChanged()
 
     val chromaticMode: Flow<Boolean> = preferences.map { prefs ->
         prefs[Keys.chromaticMode] ?: false
-    }
+    }.distinctUntilChanged()
 
     // ---- Settings writes -------------------------------------------------
 

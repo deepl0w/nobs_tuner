@@ -29,7 +29,24 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** Full-scale deflection of the needle, in cents either side of centre. */
-private const val RANGE_CENTS = 50f
+internal const val RANGE_CENTS = 50f
+
+/** Degrees the needle travels either side of straight up at full scale. */
+internal const val HALF_SWEEP_DEGREES = 90f
+
+/**
+ * Degrees from straight up at which the needle sits for a given offset.
+ *
+ * The dial is a half circle, so full scale ([RANGE_CENTS]) is a quarter turn
+ * either way. Everything drawn on the dial has to agree with this or the needle
+ * and the markings tell the user different things.
+ */
+internal fun needleDegreesFor(cents: Float): Float =
+    (cents / RANGE_CENTS) * HALF_SWEEP_DEGREES
+
+/** Half-width, in degrees, of the acceptance band for a tolerance in cents. */
+internal fun toleranceHalfSweepDegrees(toleranceCents: Int): Float =
+    needleDegreesFor(toleranceCents.toFloat())
 
 /**
  * Half-circle needle gauge showing how far the played note is from its target.
@@ -123,7 +140,7 @@ private fun DrawScope.drawDial(
     )
 
     // The acceptance band, drawn symmetrically about straight up.
-    val toleranceSweep = (toleranceCents / RANGE_CENTS) * 180f
+    val toleranceSweep = toleranceHalfSweepDegrees(toleranceCents)
     drawArc(
         color = if (active) inTuneColor else inTuneColor.copy(alpha = 0.35f),
         startAngle = 270f - toleranceSweep,
@@ -171,7 +188,7 @@ private fun DrawScope.drawDial(
 
 /** Radians from straight up, positive clockwise (sharp to the right). */
 private fun angleFor(cents: Float): Float =
-    (cents / RANGE_CENTS) * (Math.PI.toFloat() / 2f)
+    Math.toRadians(needleDegreesFor(cents).toDouble()).toFloat()
 
 private fun pointOn(centre: Offset, distance: Float, angleFromUp: Float): Offset =
     Offset(
