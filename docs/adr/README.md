@@ -5,7 +5,13 @@ inherit. Records are **append-only**: once a record is published its argument is
 never rewritten, only its status changed to `Superseded by NNNN`. A later
 decision that narrows an earlier one says so on its own face.
 
-Numbering is sequential, four digits, and never reused.
+Numbering is sequential, four digits, and never reused. **Claim a number before
+you write, with `.claude/scripts/fleet.sh adr-claim "<title>"`.** It allocates
+against every number that exists anywhere — on any branch, in any worktree's
+working tree including an uncommitted draft, and in the claims file — rather
+than against what anyone remembers agreeing. Reserving by message does not
+work: a reservation and the work it was meant to protect can cross, which is
+how 0009 came to be claimed twice. `fleet.sh adr-taken` shows who holds what.
 
 | # | Decision | Status |
 | --- | --- | --- |
