@@ -17,6 +17,7 @@ Numbering is sequential, four digits, and never reused.
 | [0006](0006-layout-from-measured-window-size.md) | Lay out from measured window size, not device class | Accepted |
 | [0007](0007-no-network-permission.md) | Ship with no network permission | Accepted |
 | [0008](0008-verify-pitch-tracking-off-device.md) | Verify pitch tracking off-device, against real recordings | Accepted |
+| [0009](0009-interfaces-for-the-seams-that-tests-need.md) | Interfaces only where a test needs a seam | Accepted |
 
 ## The audio path
 

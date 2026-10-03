@@ -3,9 +3,6 @@ package io.github.deeplow.nobstuner.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -14,7 +11,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import io.github.deeplow.nobstuner.model.Tuning
 import io.github.deeplow.nobstuner.ui.screens.CustomTuningScreen
 import io.github.deeplow.nobstuner.ui.screens.LibraryScreen
 import io.github.deeplow.nobstuner.ui.screens.SettingsScreen
@@ -31,22 +27,34 @@ private object Routes {
         "editor?editId=${editId.orEmpty()}&seedId=${seedId.orEmpty()}"
 }
 
+/**
+ * The composition root of the UI.
+ *
+ * All three view models are obtained here, at the activity's scope, and their
+ * state is handed down to screens as plain values. The screens themselves stay
+ * free of view models, which is what lets them be previewed and read as
+ * functions of their arguments.
+ */
 @Composable
 fun NobsTunerApp(appVersion: String) {
-    val viewModel: TunerViewModel = viewModel(factory = TunerViewModel.Factory)
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val libraryState by viewModel.libraryState.collectAsStateWithLifecycle()
-    val tunedStrings by viewModel.tunedStrings.collectAsStateWithLifecycle()
+    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
+    val tunerViewModel: TunerViewModel = viewModel(factory = TunerViewModel.Factory)
+    val libraryViewModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory)
+
+    val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    val uiState by tunerViewModel.uiState.collectAsStateWithLifecycle()
+    val libraryState by libraryViewModel.state.collectAsStateWithLifecycle()
+    val tunedStrings by tunerViewModel.tunedStrings.collectAsStateWithLifecycle()
 
     // Applied here rather than inside the tuner screen so that toggling it in
     // Settings takes effect straight away, and so the screen stays awake while
     // you are browsing tunings mid-session.
     val view = LocalView.current
-    LaunchedEffect(uiState.settings.keepScreenOn) {
-        view.keepScreenOn = uiState.settings.keepScreenOn
+    LaunchedEffect(settings.keepScreenOn) {
+        view.keepScreenOn = settings.keepScreenOn
     }
 
-    NobsTunerTheme(themeMode = uiState.settings.themeMode) {
+    NobsTunerTheme(themeMode = settings.themeMode) {
         val navController = rememberNavController()
 
         NavHost(navController = navController, startDestination = Routes.TUNER) {
@@ -54,12 +62,12 @@ fun NobsTunerApp(appVersion: String) {
                 TunerScreen(
                     state = uiState,
                     tunedStrings = tunedStrings,
-                    onStartListening = viewModel::startListening,
-                    onStopListening = viewModel::stopListening,
-                    onPermissionResult = viewModel::onPermissionResult,
-                    onToggleChromatic = viewModel::setChromaticMode,
-                    onToggleFavorite = { viewModel.toggleFavorite(uiState.tuning.id) },
-                    onSelectString = viewModel::selectString,
+                    onStartListening = tunerViewModel::startListening,
+                    onStopListening = tunerViewModel::stopListening,
+                    onPermissionResult = tunerViewModel::onPermissionResult,
+                    onToggleChromatic = tunerViewModel::setChromaticMode,
+                    onToggleFavorite = { tunerViewModel.toggleFavorite(uiState.tuning.id) },
+                    onSelectString = tunerViewModel::selectString,
                     onOpenLibrary = { navController.navigate(Routes.LIBRARY) },
                     onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 )
@@ -70,16 +78,16 @@ fun NobsTunerApp(appVersion: String) {
                     state = libraryState,
                     onBack = navController::popBackStack,
                     onSelect = { id ->
-                        viewModel.selectTuning(id)
+                        libraryViewModel.selectTuning(id)
                         navController.popBackStack()
                     },
-                    onToggleFavorite = viewModel::toggleFavorite,
+                    onToggleFavorite = libraryViewModel::toggleFavorite,
                     onCreate = { navController.navigate(Routes.editor()) },
                     onEdit = { id -> navController.navigate(Routes.editor(editId = id)) },
                     onDuplicate = { tuning ->
                         navController.navigate(Routes.editor(seedId = tuning.id))
                     },
-                    onDelete = viewModel::deleteCustomTuning,
+                    onDelete = libraryViewModel::deleteCustomTuning,
                 )
             }
 
@@ -93,12 +101,14 @@ fun NobsTunerApp(appVersion: String) {
                 val editId = backStackEntry.arguments?.getString("editId").orEmpty()
                 val seedId = backStackEntry.arguments?.getString("seedId").orEmpty()
                 CustomTuningScreen(
-                    existing = editId.takeIf { it.isNotEmpty() }?.let(viewModel::findTuning),
-                    seedFrom = seedId.takeIf { it.isNotEmpty() }?.let(viewModel::findTuning),
-                    useFlats = uiState.settings.useFlats,
+                    existing = editId.takeIf { it.isNotEmpty() }
+                        ?.let(libraryViewModel::findTuning),
+                    seedFrom = seedId.takeIf { it.isNotEmpty() }
+                        ?.let(libraryViewModel::findTuning),
+                    useFlats = settings.useFlats,
                     onBack = navController::popBackStack,
                     onSave = { existingId, name, family, strings ->
-                        viewModel.saveCustomTuning(existingId, name, family, strings)
+                        libraryViewModel.saveCustomTuning(existingId, name, family, strings)
                         // Straight back to the tuner: saving selects the tuning,
                         // and the library in between would just be a flash.
                         navController.popBackStack(Routes.TUNER, inclusive = false)
@@ -108,16 +118,16 @@ fun NobsTunerApp(appVersion: String) {
 
             composable(Routes.SETTINGS) {
                 SettingsScreen(
-                    settings = uiState.settings,
+                    settings = settings,
                     appVersion = appVersion,
                     onBack = navController::popBackStack,
-                    onReferencePitchChange = viewModel::setReferencePitch,
-                    onUseFlatsChange = viewModel::setUseFlats,
-                    onToleranceChange = viewModel::setToleranceCents,
-                    onDisplayStyleChange = viewModel::setDisplayStyle,
-                    onAutoDetectChange = viewModel::setAutoDetectString,
-                    onKeepScreenOnChange = viewModel::setKeepScreenOn,
-                    onThemeChange = viewModel::setThemeMode,
+                    onReferencePitchChange = settingsViewModel::setReferencePitch,
+                    onUseFlatsChange = settingsViewModel::setUseFlats,
+                    onToleranceChange = settingsViewModel::setToleranceCents,
+                    onDisplayStyleChange = settingsViewModel::setDisplayStyle,
+                    onAutoDetectChange = settingsViewModel::setAutoDetectString,
+                    onKeepScreenOnChange = settingsViewModel::setKeepScreenOn,
+                    onThemeChange = settingsViewModel::setThemeMode,
                 )
             }
         }
