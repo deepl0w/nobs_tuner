@@ -8,6 +8,23 @@ the ADR is right.
 
 For what the app does, see the [README](../README.md).
 
+## Two artefacts, one tuner
+
+There is an Android app and a web app, and they are the *same tuner*: the pitch
+detection, the note maths and the sixty-one presets are one body of Kotlin,
+compiled twice ([0010](adr/0010-one-tuner-core-two-platforms.md)). Only the
+microphone and the user interface are written per platform.
+
+```
+      :core (Kotlin Multiplatform)              →  jvm   →  :app  (Android)
+      audio/ model/ data/UserSettings           →  js    →  web/  (PWA)
+```
+
+Everything shared is in `core/src/commonMain/`, under the package names it has
+always had, so `import io.github.deeplow.nobstuner.audio.PitchDetector` means
+the same thing in both. An Android import cannot compile there, which is what
+now enforces the boundary the records rely on.
+
 ## The shape of it
 
 Four layers. Dependencies only ever point downwards — nothing in `model/` or
@@ -17,27 +34,34 @@ Four layers. Dependencies only ever point downwards — nothing in `model/` or
 ```
           ┌───────────────────────────────────────────────┐
   ui/     │  NobsTunerApp ── screens ── components        │  Compose
-          │        │                                      │
+          │        │                                      │  :app
           │  TunerViewModel  LibraryViewModel  SettingsVM  │
           └────────┬───────────────────┬──────────────────┘
                    │                   │
           ┌────────▼────────┐ ┌────────▼──────────────────┐
   audio/  │  PitchSource    │ │  TunerRepository          │  data/
-          │   └ AudioEngine │ │   └ DataStoreTunerRepo    │
-          │  PitchDetector  │ └────────┬──────────────────┘
-          │  PitchSmoother  │          │
+          │   └ AudioEngine │ │   └ DataStoreTunerRepo    │  :app
+          ╞═════════════════╪═╪═══════════════════════════╡
+          │  PitchDetector  │ │  UserSettings             │  :core
+          │  PitchSmoother  │ └────────┬──────────────────┘
           │  Fft, HighPass  │          │
           └────────┬────────┘          │
                    │                   │
           ┌────────▼───────────────────▼──────────────────┐
   model/  │  Notes   Tuning   TuningCatalog               │  pure Kotlin
-          │  PitchTargeting                               │
+          │  PitchTargeting                               │  :core
           └───────────────────────────────────────────────┘
 ```
 
+The double line is the module boundary. Above it is Android; below it is shared
+with the browser, where `main.js` and `meters.js` sit where the view models and
+Compose do, and an `AudioWorklet` sits where `AudioEngine` does.
+
 `model/` is plain Kotlin: note maths, the tuning types, the preset catalog, and
 the rule that decides which note the tuner aims at. `audio/` is the signal
-chain. `data/` is persistence. `ui/` is Compose plus the three view models.
+chain. `data/` is persistence — the interface and its DataStore implementation
+are Android, while `UserSettings` itself is shared. `ui/` is Compose plus the
+three view models.
 
 ## The path a note takes
 
@@ -162,13 +186,22 @@ Two interfaces exist purely as seams:
 
 | layer | how it is tested |
 |---|---|
-| `model/` | directly — pure functions, no fixtures |
-| `audio/` | JVM tests, plus real instrument recordings through the full chain |
+| `model/` | directly — pure functions, no fixtures. **JVM and JavaScript** |
+| `audio/` | synthesised tones, plus real recordings through the full chain. **JVM and JavaScript**, except the recordings |
 | `ui/` view models | fakes for both seams, virtual clock via `runTest` |
 | `ui/` screens | layout arithmetic extracted and tested (`BalancedRowsTest`) |
 | device | `AudioEngineInstrumentedTest`, `AudioSourceProbeTest` |
 
-The recording tests skip unless the fixtures are present; `./test.sh --audio`
+Everything in `core/src/commonTest/` runs twice — once against the JVM
+compilation the Android app uses and once, on Node, against the JavaScript the
+browser loads. That is what stops the two platforms drifting apart
+([0010](adr/0010-one-tuner-core-two-platforms.md)): a detector that behaved
+differently in a browser would turn CI red rather than turn up on someone's
+violin. `./gradlew :core:jvmTest` and `:core:jsNodeTest` run the two halves;
+`./test.sh` runs the JVM one alongside the app's.
+
+The recording tests are JVM-only, because they decode WAV files with
+`javax.sound`, and they skip unless the fixtures are present; `./test.sh --audio`
 fetches them. Why that suite exists in the form it does is
 [ADR 0008](adr/0008-verify-pitch-tracking-off-device.md). Instrumented tests
 cover what only a real device can answer — that the recorder opens, and which
@@ -179,32 +212,56 @@ cannot be fed a known signal; that is what the recording tests are for.
 ## Where things live
 
 ```
+core/src/
+├── commonMain/kotlin/io/github/deeplow/nobstuner/
+│   ├── audio/                   PitchSource, detector, smoother, FFT, filter, Analysis
+│   ├── model/                   Notes, Tuning, TuningCatalog, PitchTargeting
+│   └── data/UserSettings.kt     the settings type, without the storage
+├── commonTest/                  the pitch suite — runs on the JVM *and* on Node
+├── jvmTest/                     RealRecordingPitchTest, which decodes WAV files
+└── jsMain/kotlin/.../js/        the @JsExport facade the web app imports
+
 app/src/main/java/io/github/deeplow/nobstuner/
 ├── AppContainer.kt              composition root
 ├── NobsTunerApplication.kt      owns the container
 ├── MainActivity.kt              sets the Compose content
-├── audio/                       PitchSource, AudioEngine, detector, smoother, FFT, filter
-├── data/                        TunerRepository + DataStore implementation, UserSettings
-├── model/                       Notes, Tuning, TuningCatalog, PitchTargeting
+├── audio/                       AudioEngine and MicrophonePitchSource — the Android half
+├── data/                        TunerRepository + its DataStore implementation
 └── ui/
     ├── NobsTunerApp.kt          navigation and view-model wiring
     ├── *ViewModel.kt            tuner, library, settings
     ├── screens/                 tuner, library, editor, settings
     ├── components/              meters, readout, string selector, responsive helpers
     └── theme/
+
+web/                             the PWA; see web/README.md
+├── index.html styles.css sw.js manifest.webmanifest
+├── src/                         main.js, audio.js, meters.js, store.js, views/
+└── vendor/                      the compiled core — generated, git-ignored
 ```
 
 ## If you are adding something
 
+Ask first whether it belongs to one platform or to both. Anything about *pitch*
+— what a note is, which string is meant, how a reading settles — belongs in
+`:core`, where it is written once and tested on both compilations. Anything
+about how it looks or where it is stored belongs to a platform.
+
 - **A new tuning preset** — add it to `TuningCatalog.presets` with an id that
-  will never change.
-- **A new display style** — add to the `DisplayStyle` enum, draw it in
-  `MeterStyles.kt`, add its aspect ratio to `meterWidthFor` in `TunerScreen.kt`.
-  The enum carries its own name and description, so Settings picks it up.
-- **A new setting** — add the field to `UserSettings`, a key and its read/write
-  to `DataStoreTunerRepository`, the signature to `TunerRepository`, a setter to
-  `SettingsViewModel`, and a row to `SettingsScreen`. Then make sure something
-  actually reads it: a setting that is persisted and displayed but never
-  consulted looks exactly like a working one.
+  will never change. Both apps pick it up; the web app reads the same list
+  through `presetsJson()`.
+- **A new display style** — add to the `DisplayStyle` enum in `:core`, which
+  carries its own name and description so both settings screens list it. Then
+  draw it twice: `MeterStyles.kt` for Compose and `web/src/meters.js` for
+  canvas, adding its aspect ratio to `meterWidthFor` in both. This is the one
+  place a deliberate duplicate lives, because a dial is a drawing and there is
+  no shared canvas to draw it on.
+- **A new setting** — add the field to `UserSettings` in `:core`, then a key and
+  its read/write in `DataStoreTunerRepository`, the signature on
+  `TunerRepository`, a setter on `SettingsViewModel` and a row in
+  `SettingsScreen`; on the web, a default in `defaultsJson()`, validation in
+  `store.js` and a row in `views/settings.js`. Then make sure something actually
+  reads it: a setting that is persisted and displayed but never consulted looks
+  exactly like a working one.
 - **Anything touching what the needle points at** — it belongs in
   `PitchTargeting`, where it can be tested without a view model.

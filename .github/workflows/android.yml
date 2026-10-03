@@ -32,8 +32,9 @@ jobs:
           sudo apt-get update && sudo apt-get install -y ffmpeg
           tools/fetch-test-audio.sh
 
+      # The pitch chain lives in :core now, so :app alone no longer covers it.
       - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew :core:jvmTest :app:testDebugUnitTest
 
       - name: Lint
         run: ./gradlew :app:lintRelease
@@ -45,6 +46,7 @@ jobs:
           name: reports
           path: |
             app/build/reports/tests/
+            core/build/reports/tests/
             app/build/reports/lint-results-release.html
           if-no-files-found: ignore
 

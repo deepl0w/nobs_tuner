@@ -18,31 +18,50 @@ Numbering is sequential, four digits, and never reused.
 | [0007](0007-no-network-permission.md) | Ship with no network permission | Accepted |
 | [0008](0008-verify-pitch-tracking-off-device.md) | Verify pitch tracking off-device, against real recordings | Accepted |
 | [0009](0009-interfaces-for-the-seams-that-tests-need.md) | Interfaces only where a test needs a seam | Accepted |
+| [0010](0010-one-tuner-core-two-platforms.md) | One tuner core, compiled for two platforms | Accepted |
+| [0011](0011-a-web-tuner-alongside-the-app.md) | A web tuner alongside the app, and the privacy claim | Accepted |
 
 ## The audio path
 
 Everything from the high-pass filter rightwards is plain Kotlin with no Android
 imports, which is what lets the whole chain run under JUnit on a laptop
-([0008](0008-verify-pitch-tracking-off-device.md)).
+([0008](0008-verify-pitch-tracking-off-device.md)) and, since
+[0010](0010-one-tuner-core-two-platforms.md), compile to JavaScript for the web
+app as well. The green band is the shared `core` module; each platform supplies
+only its own microphone and its own user interface.
 
 ```mermaid
 flowchart LR
-    mic["AudioRecord<br/>(Android)"] --> hp["HighPassFilter<br/>25 Hz"]
-    hp --> det["PitchDetector<br/>YIN + FFT"]
+    mic["AudioRecord<br/>(Android)"] --> hp
+    web["AudioWorklet<br/>(browser)"] --> hp
+    hp["HighPassFilter<br/>25 Hz"] --> det["PitchDetector<br/>YIN + FFT"]
     det --> sm["PitchSmoother<br/>gating, octave, easing"]
     sm --> tgt["PitchTargeting<br/>string or chromatic"]
     tgt --> ui["TunerViewModel<br/>and Compose"]
+    tgt --> dom["main.js<br/>and canvas"]
 
     classDef android fill:#f6d8d8,stroke:#9b4b4b,color:#2b1414
+    classDef browser fill:#d8e2f6,stroke:#4b5f9b,color:#141c2b
     classDef pure fill:#dbe9d6,stroke:#4f7a43,color:#16210f
-    class mic android
+    class mic,ui android
+    class web,dom browser
     class hp,det,sm,tgt pure
-    class ui android
 ```
 
 `AudioEngine` is the only file under `audio/` or `model/` that imports
-`android.*` — verified with
-`grep -rln '^import android\.' app/src/main/java/io/github/deeplow/nobstuner/{audio,model}`.
+`android.*`. Since 0010 those packages live in `core/src/commonMain/`, where an
+Android import would not compile at all, and the one file that needs them stayed
+behind in the app module — so the property the records rely on is now enforced
+by the build rather than by a grep. The grep still answers "is anything
+Android-shaped hiding in the app module's half?":
+
+```bash
+grep -rln '^import android\.' \
+  app/src/main/java/io/github/deeplow/nobstuner/audio \
+  core/src/commonMain/kotlin/io/github/deeplow/nobstuner
+```
+
+It should name `AudioEngine.kt` and nothing else.
 
 ## Template
 
