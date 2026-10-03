@@ -46,6 +46,40 @@ readings a second, with enough window to resolve a low B on a five-string bass.
 ## Building
 
 Requires JDK 17+ and the Android SDK. Everything else comes from the wrapper.
+Point the build at your SDK with a `local.properties` containing
+`sdk.dir=/path/to/Android/Sdk`, or set `ANDROID_HOME`.
+
+Check the machine is ready, then build:
+
+```bash
+./test.sh --check     # Java, SDK, wrapper, adb, Gradle config
+./build.sh            # debug APK
+./build.sh --run      # build, install and launch
+./build.sh --bundle   # the .aab to upload to Play
+```
+
+`make` wraps the same things — `make help` lists every target:
+
+| Command | Does |
+|---|---|
+| `make build` / `make run` | Debug APK; or build, install and launch |
+| `make test` | JVM unit tests |
+| `make test-audio` | Fetch the instrument recordings, then run the unit tests |
+| `make device-test` | Instrumented tests on a connected device |
+| `make lint` / `make verify` | Lint; or unit tests + lint + instrumented |
+| `make deploy` / `make logs` | Install and follow logs; or just follow logs |
+| `make release` / `make bundle` | Release APK; or the Play Store bundle |
+| `make clean` / `make info` | Clean; or print toolchain, packages and paths |
+
+The scripts read `applicationId` and `namespace` out of `app/build.gradle.kts`
+rather than hardcoding them, so renaming the application id before publishing
+does not quietly break them. With more than one device attached they stop and
+ask which, instead of picking for you — pass `--device <serial>` (`--serial` for
+`test.sh`). `deploy.sh` installs over the top so saved tunings survive; use
+`--fresh` to wipe.
+
+Under the hood these are ordinary Gradle tasks, if you would rather call them
+directly:
 
 ```bash
 ./gradlew :app:assembleDebug        # debug APK
@@ -53,9 +87,6 @@ Requires JDK 17+ and the Android SDK. Everything else comes from the wrapper.
 ./gradlew :app:lintRelease          # lint
 ./gradlew :app:bundleRelease        # Play Store AAB
 ```
-
-Point the build at your SDK with a `local.properties` containing
-`sdk.dir=/path/to/Android/Sdk`, or set `ANDROID_HOME`.
 
 ## Tests
 
