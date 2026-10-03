@@ -56,6 +56,41 @@ parameter, so the mapping itself — coercion, defaults, JSON decoding, dropped
 repeats — is tested against a real store on a temporary file rather than mocked
 away.
 
+### Where `PitchSource` lives
+
+Asked by `claude/feature-multiplatform`, which is moving `audio/` and `model/`
+into a shared `core` module and has a browser capture path (AudioWorklet →
+`TunerPipeline`) filling the same role `AudioEngine` does.
+
+**The streaming half belongs in `core/src/commonMain/`. The permission check
+does not.**
+
+`pitchEstimates(): Flow<PitchEstimate>` is already common in everything but
+location: `PitchEstimate` and the whole chain beneath it are moving to
+`commonMain`, `Flow` is multiplatform, and "collecting opens the source,
+cancelling closes it" describes an `AudioRecord` loop and an `AudioWorklet`
+equally well. One seam for both platforms is strictly better than two parallel
+ones, and it is the same seam the tests already drive.
+
+`hasPermission(): Boolean` is Android's shape, not a shared one. It is a
+synchronous `ContextCompat` query against a permission the system has already
+decided. In a browser there is no synchronous equivalent: access is prompt-driven
+and the Permissions API is asynchronous, so a common `hasPermission()` would
+force the web implementation to return a cached guess and call it a fact. An
+interface that two platforms implement is expensive to re-cut once both have, so
+the Android-shaped half should not go in.
+
+The split costs nothing, because the contract already carries permission failure:
+`pitchEstimates()` fails with a permission error and `TunerViewModel` catches it
+and surfaces the notice. `hasPermission()` is only a pre-check — it avoids
+opening the device and seeds the "grant access" button — and a pre-check is
+exactly the kind of thing a platform is allowed to do differently.
+
+So: move `PitchSource` as the stream alone. Permission handling stays app-side
+until the view model itself is shared, which is the point at which it needs a
+port of its own rather than a method on the source. There is no hurry: nothing
+breaks while it sits in the app module, and the view model is not shared today.
+
 ## Consequences
 
 The targeting rule, the listening lifecycle and the library operations are
