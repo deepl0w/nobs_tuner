@@ -47,8 +47,22 @@ flowchart LR
 ```
 
 `AudioEngine` is the only file under `audio/` or `model/` that imports
-`android.*` — verified with
-`grep -rln '^import android\.' app/src/main/java/io/github/deeplow/nobstuner/{audio,model}`.
+`android.*`. That is the boundary [0008](0008-verify-pitch-tracking-off-device.md)
+rests on, so it is worth being able to re-ask rather than trust:
+
+```bash
+git ls-files '*/audio/*.kt' '*/model/*.kt' \
+  | grep -vE '/(test|androidTest|commonTest|jvmTest|jsTest)/' \
+  | xargs grep -l '^import android\.'
+```
+
+It should print exactly one path, ending `audio/AudioEngine.kt`. Test source
+sets are excluded deliberately: an instrumented test under `audio/` may import
+`android.*`, and does.
+
+The question is asked of the repository rather than of one directory, so the
+answer stays meaningful if these files move between modules — which is the point
+at which it would otherwise quietly stop being checked.
 
 ## Template
 
