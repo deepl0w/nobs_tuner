@@ -1,0 +1,196 @@
+<title>Nobs Tuner Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+  /* Layout: a single reading column; status carried by a left severity rule, not by cards. */
+  :root {
+    --bg: #faf7f1;
+    --surface: #fffdf9;
+    --fg: #241f18;
+    --muted: #6d6456;
+    --faint: #a1967f;
+    --rule: #e3dbcb;
+    --brass: #8a6a2f;
+    --done: #2f6b43;
+    --pending: #b0601a;
+    --blocked: #a33125;
+    --font-display: "IBM Plex Serif", Georgia, serif;
+    --font-body: "IBM Plex Sans", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17140f; --surface: #1f1b15; --fg: #ece5d9; --muted: #a79c8a;
+      --faint: #756b5c; --rule: #332c23; --brass: #e0b45c;
+      --done: #76c48f; --pending: #e8a35c; --blocked: #ef8d7e;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17140f; --surface: #1f1b15; --fg: #ece5d9; --muted: #a79c8a;
+    --faint: #756b5c; --rule: #332c23; --brass: #e0b45c;
+    --done: #76c48f; --pending: #e8a35c; --blocked: #ef8d7e;
+    color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); line-height: 1.55; }
+  .wrap { max-width: 56rem; margin: 0 auto; padding-inline: 20px; padding-block: 3rem 5rem; }
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(1.9rem, 1.3rem + 2.4vw, 2.9rem); font-weight: 600; letter-spacing: -0.015em; }
+  h2 { font-size: 1.4rem; font-weight: 600; }
+  h3 { font-size: 1.02rem; font-weight: 600; font-family: var(--font-body); }
+  p { margin: 0; }
+  .eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.14em;
+             text-transform: uppercase; color: var(--brass); }
+  .lede { color: var(--muted); font-size: 1.04rem; max-width: 62ch; margin-top: 0.7rem; }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  header { border-bottom: 2px solid var(--rule); padding-bottom: 1.6rem; }
+  .meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; margin-top: 1.1rem;
+          font-family: var(--font-mono); font-size: 0.78rem; color: var(--faint); }
+  .meta b { color: var(--muted); font-weight: 500; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+           gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+           margin-top: 2.4rem; }
+  .tile { background: var(--surface); padding: 1rem 1.1rem; min-width: 0; }
+  .tile .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+             font-size: 1.55rem; font-weight: 500; line-height: 1.1; }
+  .tile .k { font-size: 0.76rem; color: var(--muted); margin-top: 0.3rem; }
+
+  section { margin-top: 3.4rem; }
+  section > h2 { padding-bottom: 0.55rem; border-bottom: 1px solid var(--rule); }
+  .intro { color: var(--muted); margin-top: 0.9rem; max-width: 62ch; }
+
+  .items { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.7rem; }
+  .item { border-left: 3px solid var(--rule); padding-left: 1.05rem; min-width: 0; }
+  .item.done { border-left-color: var(--done); }
+  .item.pending { border-left-color: var(--pending); }
+  .item.blocked { border-left-color: var(--blocked); }
+  .item p { color: var(--muted); margin-top: 0.4rem; font-size: 0.94rem; }
+  .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.75rem; }
+  .chip { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.07em;
+          text-transform: uppercase; padding: 0.12rem 0.45rem; border: 1px solid currentColor;
+          border-radius: 2px; white-space: nowrap; }
+  .chip.done { color: var(--done); }
+  .chip.pending { color: var(--pending); }
+  .chip.blocked { color: var(--blocked); }
+  .chip.who { color: var(--faint); }
+  .ev { font-family: var(--font-mono); font-size: 0.8rem; color: var(--fg);
+        background: var(--surface); border: 1px solid var(--rule); border-radius: 2px;
+        padding: 0.55rem 0.7rem; margin-top: 0.6rem; overflow-x: auto; }
+  .ev b { color: var(--brass); font-weight: 500; }
+
+  ol.steps { list-style: none; counter-reset: s; margin: 1.7rem 0 0; padding: 0;
+             display: flex; flex-direction: column; gap: 1.2rem; }
+  ol.steps li { counter-increment: s; display: grid; grid-template-columns: 2rem 1fr;
+                gap: 0.9rem; align-items: start; min-width: 0; }
+  ol.steps li::before { content: counter(s, decimal-leading-zero);
+    font-family: var(--font-mono); font-size: 0.82rem; color: var(--brass);
+    border: 1px solid var(--rule); border-radius: 2px; text-align: center;
+    padding: 0.1rem 0; line-height: 1.5; }
+  ol.steps p { color: var(--muted); font-size: 0.94rem; margin-top: 0.25rem; }
+
+  footer { margin-top: 4rem; padding-top: 1.4rem; border-top: 1px solid var(--rule);
+           color: var(--faint); font-size: 0.85rem; }
+  @media (max-width: 420px) { .tile .v { font-size: 1.3rem; } }
+
+  /* Chart tokens: validated categorical pair (blue/orange) plus fixed status red. */
+  :root {
+    --viz-surface: #fffdf9; --viz-grid: #e3dbcb; --viz-text: #241f18;
+    --viz-muted: #6d6456; --viz-s1: #2a78d6; --viz-s2: #eb6834; --viz-critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --viz-surface: #1f1b15; --viz-grid: #332c23; --viz-text: #ece5d9;
+      --viz-muted: #a79c8a; --viz-s1: #3987e5; --viz-s2: #d95926; --viz-critical: #e8766f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --viz-surface: #1f1b15; --viz-grid: #332c23; --viz-text: #ece5d9;
+    --viz-muted: #a79c8a; --viz-s1: #3987e5; --viz-s2: #d95926; --viz-critical: #e8766f;
+  }
+  figure { margin: 1.3rem 0 0; }
+  figure svg { display: block; background: var(--viz-surface);
+               border: 1px solid var(--rule); border-radius: 3px; }
+  figcaption { font-size: 0.84rem; color: var(--muted); margin-top: 0.55rem;
+               max-width: 62ch; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+           gap: 1rem; margin-top: 1.4rem; }
+  .shots figure { margin: 0; min-width: 0; }
+  .shots img { width: 100%; border: 1px solid var(--rule); border-radius: 4px; display: block; }
+  .wide img { width: 100%; border: 1px solid var(--rule); border-radius: 4px; display: block; }
+  pre.mermaid { background: var(--surface); border: 1px solid var(--rule);
+                border-radius: 3px; padding: 0.9rem; margin: 1.3rem 0 0; overflow-x: auto; }
+  .how { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--brass);
+         border-radius: 0 3px 3px 0; padding: 1rem 1.1rem; margin-top: 1.3rem; }
+  .how h4 { font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--brass); margin: 0 0 0.5rem; font-weight: 600; }
+  .how p { color: var(--muted); font-size: 0.92rem; margin: 0; }
+  .how p + p { margin-top: 0.6rem; }
+</style>
+
+<!-- ============================================================ SLOTS
+  Fill every {{...}} and keep the structure: the classes carry the design, so
+  new prose inherits it without further decisions.
+
+  An item, used in all three sections:
+    <div class="item done|pending|blocked">
+      <div class="head"><h3>Title</h3>
+        <span class="chip done|pending|blocked">state</span>
+        <span class="chip who">owner</span></div>
+      <p>Two or three sentences: what changed, and why it mattered.</p>
+      <div class="ev">A measured figure, with <b>the number</b> marked.</div>
+      <figure>…inline SVG…<figcaption>What it shows.</figcaption></figure>
+      <div class="how"><h4>Why</h4><p>…</p></div>
+    </div>
+
+  Charts: run docs/report/make_charts.py, then paste the SVG inline rather than
+  linking it, so it follows the page theme through the --viz-* tokens.
+  Screenshots: publish alongside the page and reference as img/<name>.png.
+  Numbers: tools/report-facts.sh prints them. Never write one from memory.
+-->
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Status report · {{DATE}}</p>
+    <h1>Nobs Tuner</h1>
+    <p class="lede">{{What this report covers, and what state the work is in.}}</p>
+    <div class="meta">
+      <span><b>main</b> <span class="num">{{SHA}}</span></span>
+      <span><b>suite</b> <span class="num">{{TESTS}}</span> passing, {{FAILED}} failed, {{SKIPPED}} skipped</span>
+      <span><b>lint</b> {{LINT}}</span>
+      <span><b>bundle</b> <span class="num">{{MB}}</span> MB</span>
+    </div>
+  </header>
+
+  <div class="tiles">
+    <!-- Six at most. A tile is a number worth remembering, not a table row. -->
+    <div class="tile"><div class="v">{{N}}</div><div class="k">{{what it counts}}</div></div>
+  </div>
+
+  <section>
+    <h2>What was done</h2>
+    <p class="intro">{{Lead with what works, not with effort.}}</p>
+    <div class="items">{{items, class "done"}}</div>
+  </section>
+
+  <section>
+    <h2>Pending</h2>
+    <p class="intro">{{Say which items need the reader and which already have an owner.}}</p>
+    <div class="items">{{items, class "pending" or "blocked"}}</div>
+  </section>
+
+  <section>
+    <h2>What happens next</h2>
+    <p class="intro">{{In order. Say which steps need nothing from the reader.}}</p>
+    <ol class="steps">
+      <li><div><h3>{{Step}}</h3><p>{{What it involves.}}</p></div></li>
+    </ol>
+  </section>
+
+  <footer>
+    <p>{{Where the figures came from, and the one thing still unproven.}}</p>
+  </footer>
+</div>

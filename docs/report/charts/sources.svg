@@ -1,0 +1,27 @@
+<svg viewBox="0 0 560 180" width="100%" role="img" aria-label="The same tone measured 33 dB quieter through the audio source the app prefers" font-family="IBM Plex Sans, system-ui, sans-serif">
+<line x1="506.0" y1="20" x2="506.0" y2="150" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="506.0" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">0</text>
+<line x1="450.6" y1="20" x2="450.6" y2="150" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="450.6" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-10</text>
+<line x1="395.1" y1="20" x2="395.1" y2="150" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="395.1" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-20</text>
+<line x1="339.7" y1="20" x2="339.7" y2="150" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="339.7" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-30</text>
+<line x1="284.3" y1="20" x2="284.3" y2="150" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="284.3" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-40</text>
+<line x1="228.9" y1="20" x2="228.9" y2="150" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="228.9" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-50</text>
+<line x1="173.4" y1="20" x2="173.4" y2="150" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="173.4" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-60</text>
+<line x1="118.0" y1="20" x2="118.0" y2="150" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="118.0" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-70</text>
+<rect x="118.0" y="26" width="244.4" height="26" rx="4" fill="var(--viz-s1)"/>
+<text x="106.0" y="43.0" font-size="11.5" fill="var(--viz-text)" text-anchor="end" font-weight="500">Through MIC</text>
+<text x="370.4" y="43.0" font-size="11" fill="var(--viz-text)" text-anchor="start" font-weight="500" font-family="IBM Plex Mono, monospace">-25.9 dBFS</text>
+<rect x="118.0" y="70" width="58.8" height="26" rx="4" fill="var(--viz-s2)"/>
+<text x="106.0" y="87.0" font-size="11.5" fill="var(--viz-text)" text-anchor="end" font-weight="500">Through UNPROCESSED</text>
+<text x="184.8" y="87.0" font-size="11" fill="var(--viz-text)" text-anchor="start" font-weight="500" font-family="IBM Plex Mono, monospace">-59.4 dBFS</text>
+<line x1="239.9" y1="14" x2="239.9" y2="148" stroke="var(--viz-critical)" stroke-width="2"/>
+<text x="239.9" y="9.0" font-size="10.5" fill="var(--viz-critical)" text-anchor="middle" font-weight="500" font-family="IBM Plex Mono, monospace">old gate −48 dBFS</text>
+<text x="106.0" y="164.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="end" font-weight="400">dBFS</text>
+</svg>

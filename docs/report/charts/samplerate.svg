@@ -1,0 +1,31 @@
+<svg viewBox="0 0 560 250" width="100%" role="img" aria-label="Every window shortens by about eight per cent at 48 kHz" font-family="IBM Plex Sans, system-ui, sans-serif">
+<text x="92.0" y="51.0" font-size="11" fill="var(--viz-text)" text-anchor="end" font-weight="500">hop</text>
+<rect x="104" y="38" width="3.4" height="13" rx="3" fill="var(--viz-s1)"/>
+<rect x="104" y="53" width="3.2" height="13" rx="3" fill="var(--viz-s2)"/>
+<text x="114.4" y="49.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">46 ms</text>
+<text x="114.2" y="65.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">43 ms</text>
+<text x="92.0" y="87.0" font-size="11" fill="var(--viz-text)" text-anchor="end" font-weight="500">onset</text>
+<rect x="104" y="74" width="10.3" height="13" rx="3" fill="var(--viz-s1)"/>
+<rect x="104" y="89" width="9.5" height="13" rx="3" fill="var(--viz-s2)"/>
+<text x="121.3" y="85.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">139 ms</text>
+<text x="120.5" y="101.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">128 ms</text>
+<text x="92.0" y="123.0" font-size="11" fill="var(--viz-text)" text-anchor="end" font-weight="500">fall trend</text>
+<rect x="104" y="110" width="30.9" height="13" rx="3" fill="var(--viz-s1)"/>
+<rect x="104" y="125" width="28.4" height="13" rx="3" fill="var(--viz-s2)"/>
+<text x="141.9" y="121.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">418 ms</text>
+<text x="139.4" y="137.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">384 ms</text>
+<text x="92.0" y="159.0" font-size="11" fill="var(--viz-text)" text-anchor="end" font-weight="500">release</text>
+<rect x="104" y="146" width="34.4" height="13" rx="3" fill="var(--viz-s1)"/>
+<rect x="104" y="161" width="31.6" height="13" rx="3" fill="var(--viz-s2)"/>
+<text x="145.4" y="157.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">464 ms</text>
+<text x="142.6" y="173.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">427 ms</text>
+<text x="92.0" y="195.0" font-size="11" fill="var(--viz-text)" text-anchor="end" font-weight="500">floor window</text>
+<rect x="104" y="182" width="378.0" height="13" rx="3" fill="var(--viz-s1)"/>
+<rect x="104" y="197" width="347.3" height="13" rx="3" fill="var(--viz-s2)"/>
+<text x="489.0" y="193.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">5.11 s</text>
+<text x="458.3" y="209.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="start" font-weight="400" font-family="IBM Plex Mono, monospace">4.69 s</text>
+<rect x="104" y="12" width="11" height="11" rx="2" fill="var(--viz-s1)"/>
+<text x="120.0" y="22.0" font-size="10.5" fill="var(--viz-text)" text-anchor="start" font-weight="400">44.1 kHz — Android</text>
+<rect x="300" y="12" width="11" height="11" rx="2" fill="var(--viz-s2)"/>
+<text x="316.0" y="22.0" font-size="10.5" fill="var(--viz-text)" text-anchor="start" font-weight="400">48 kHz — typical browser</text>
+</svg>

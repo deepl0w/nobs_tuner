@@ -1,0 +1,45 @@
+<svg viewBox="0 0 560 230" width="100%" role="img" aria-label="Every note on the reference guitar is flat by about the same amount" font-family="IBM Plex Sans, system-ui, sans-serif">
+<line x1="44" y1="22.0" x2="544" y2="22.0" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="36.0" y="25.5" font-size="10" fill="var(--viz-muted)" text-anchor="end" font-weight="400" font-family="IBM Plex Mono, monospace">0</text>
+<line x1="44" y1="55.2" x2="544" y2="55.2" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="36.0" y="58.7" font-size="10" fill="var(--viz-muted)" text-anchor="end" font-weight="400" font-family="IBM Plex Mono, monospace">-10</text>
+<line x1="44" y1="88.4" x2="544" y2="88.4" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="36.0" y="91.9" font-size="10" fill="var(--viz-muted)" text-anchor="end" font-weight="400" font-family="IBM Plex Mono, monospace">-20</text>
+<line x1="44" y1="121.6" x2="544" y2="121.6" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="36.0" y="125.1" font-size="10" fill="var(--viz-muted)" text-anchor="end" font-weight="400" font-family="IBM Plex Mono, monospace">-30</text>
+<line x1="44" y1="154.8" x2="544" y2="154.8" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="36.0" y="158.3" font-size="10" fill="var(--viz-muted)" text-anchor="end" font-weight="400" font-family="IBM Plex Mono, monospace">-40</text>
+<line x1="44" y1="188.0" x2="544" y2="188.0" stroke="var(--viz-grid)" stroke-width="1"/>
+<text x="36.0" y="191.5" font-size="10" fill="var(--viz-muted)" text-anchor="end" font-weight="400" font-family="IBM Plex Mono, monospace">-50</text>
+<line x1="44" y1="143.8" x2="544" y2="143.8" stroke="var(--viz-s1)" stroke-width="2" stroke-dasharray="5 4"/>
+<text x="544.0" y="135.8" font-size="10.5" fill="var(--viz-s1)" text-anchor="end" font-weight="500" font-family="IBM Plex Mono, monospace">median -36.7 cents</text>
+<line x1="79.7" y1="22.0" x2="79.7" y2="164.4" stroke="var(--viz-grid)" stroke-width="1"/>
+<circle cx="79.7" cy="164.4" r="5" fill="var(--viz-s1)" stroke="var(--viz-surface)" stroke-width="2"/>
+<text x="79.7" y="206.0" font-size="11" fill="var(--viz-text)" text-anchor="middle" font-weight="500">E2</text>
+<text x="79.7" y="219.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-42.9</text>
+<line x1="151.1" y1="22.0" x2="151.1" y2="147.8" stroke="var(--viz-grid)" stroke-width="1"/>
+<circle cx="151.1" cy="147.8" r="5" fill="var(--viz-s1)" stroke="var(--viz-surface)" stroke-width="2"/>
+<text x="151.1" y="206.0" font-size="11" fill="var(--viz-text)" text-anchor="middle" font-weight="500">F♯2</text>
+<text x="151.1" y="219.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-37.9</text>
+<line x1="222.6" y1="22.0" x2="222.6" y2="157.5" stroke="var(--viz-grid)" stroke-width="1"/>
+<circle cx="222.6" cy="157.5" r="5" fill="var(--viz-s1)" stroke="var(--viz-surface)" stroke-width="2"/>
+<text x="222.6" y="206.0" font-size="11" fill="var(--viz-text)" text-anchor="middle" font-weight="500">G2</text>
+<text x="222.6" y="219.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-40.8</text>
+<line x1="294.0" y1="22.0" x2="294.0" y2="124.6" stroke="var(--viz-grid)" stroke-width="1"/>
+<circle cx="294.0" cy="124.6" r="5" fill="var(--viz-s1)" stroke="var(--viz-surface)" stroke-width="2"/>
+<text x="294.0" y="206.0" font-size="11" fill="var(--viz-text)" text-anchor="middle" font-weight="500">G♯2</text>
+<text x="294.0" y="219.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-30.9</text>
+<line x1="365.4" y1="22.0" x2="365.4" y2="140.9" stroke="var(--viz-grid)" stroke-width="1"/>
+<circle cx="365.4" cy="140.9" r="5" fill="var(--viz-s1)" stroke="var(--viz-surface)" stroke-width="2"/>
+<text x="365.4" y="206.0" font-size="11" fill="var(--viz-text)" text-anchor="middle" font-weight="500">A2</text>
+<text x="365.4" y="219.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-35.8</text>
+<line x1="436.9" y1="22.0" x2="436.9" y2="143.8" stroke="var(--viz-grid)" stroke-width="1"/>
+<circle cx="436.9" cy="143.8" r="5" fill="var(--viz-s1)" stroke="var(--viz-surface)" stroke-width="2"/>
+<text x="436.9" y="206.0" font-size="11" fill="var(--viz-text)" text-anchor="middle" font-weight="500">A♯2</text>
+<text x="436.9" y="219.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-36.7</text>
+<line x1="508.3" y1="22.0" x2="508.3" y2="122.6" stroke="var(--viz-grid)" stroke-width="1"/>
+<circle cx="508.3" cy="122.6" r="5" fill="var(--viz-s1)" stroke="var(--viz-surface)" stroke-width="2"/>
+<text x="508.3" y="206.0" font-size="11" fill="var(--viz-text)" text-anchor="middle" font-weight="500">B2</text>
+<text x="508.3" y="219.0" font-size="9.5" fill="var(--viz-muted)" text-anchor="middle" font-weight="400" font-family="IBM Plex Mono, monospace">-30.3</text>
+<text x="36.0" y="14.0" font-size="10" fill="var(--viz-muted)" text-anchor="end" font-weight="400">cents</text>
+</svg>
