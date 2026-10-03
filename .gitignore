@@ -1,0 +1,22 @@
+# Gradle / build
+.gradle/
+build/
+app/build/
+local.properties
+
+# Signing material — never commit these
+keystore.properties
+*.jks
+*.keystore
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+captures/
+
+# OS
+.DS_Store
+
+# Downloaded test recordings (see tools/fetch-test-audio.sh)
+app/src/test/resources/realaudio/

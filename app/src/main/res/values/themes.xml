@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Compose draws everything, so the platform theme only needs to cover the
+      window before the first frame. Matching the Compose background here is
+      what stops a white flash on a dark-themed device at cold start.
+    -->
+    <style name="Theme.StringTune" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
