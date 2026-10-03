@@ -132,7 +132,7 @@ class PitchSmoother(
     }
 
     /**
-     * Only aperiodic frames teach the floor. A note held steady — a bowed
+     * Only aperiodic frames with no note in flight teach the floor. A note held steady — a bowed
      * string, a sustaining pickup — sits at a near-constant level for seconds,
      * and a floor that watched every frame would decide that level *was* the
      * room and stop hearing the note. Periodicity is what separates the two,
@@ -140,6 +140,14 @@ class PitchSmoother(
      */
     private fun rememberLevel(estimate: PitchEstimate) {
         if (estimate.frequencyHz != null && estimate.clarity >= minClarity) return
+        // Aperiodic is not the same as "no note sounding". The attack of a
+        // pluck is pick noise and string slap — aperiodic, and louder than the
+        // note it introduces — and the tail turns aperiodic while it is still
+        // clearly audible. Both arrive while a note is being tracked, and a
+        // floor that learns from them climbs towards the attacks until it sits
+        // above the note itself and the tuner goes deaf mid-session. Only
+        // frames with no note in flight at all describe the room.
+        if (smoothedLogHz != null) return
         levelWindow.addLast(estimate.levelDbfs)
         if (levelWindow.size > LEVEL_WINDOW) levelWindow.removeFirst()
     }

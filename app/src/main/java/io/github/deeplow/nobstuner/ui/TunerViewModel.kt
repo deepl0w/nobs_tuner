@@ -16,9 +16,10 @@ import io.github.deeplow.nobstuner.data.ThemeMode
 import io.github.deeplow.nobstuner.data.TunerRepository
 import io.github.deeplow.nobstuner.data.UserSettings
 import io.github.deeplow.nobstuner.model.InstrumentFamily
-import io.github.deeplow.nobstuner.model.Notes
+import io.github.deeplow.nobstuner.model.PitchTargeting
 import io.github.deeplow.nobstuner.model.Tuning
 import io.github.deeplow.nobstuner.model.TuningCatalog
+import io.github.deeplow.nobstuner.model.TuningReading
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -33,19 +35,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
-import kotlin.math.abs
-
-/** The live pitch resolved against whatever the tuner is currently aiming at. */
-data class TuningReading(
-    val frequencyHz: Double,
-    val targetMidi: Int,
-    val cents: Double,
-    val clarity: Double,
-    val levelDbfs: Double,
-    /** Index into [Tuning.strings], or null in chromatic mode. */
-    val stringIndex: Int?,
-    val inTune: Boolean,
-)
 
 data class TunerUiState(
     val settings: UserSettings = UserSettings(),
@@ -166,7 +155,7 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             combine(activeTuning, repository.chromaticMode) { tuning, chromatic ->
                 tuning.id to chromatic
-            }.collect {
+            }.distinctUntilChanged().collect {
                 _tunedStrings.value = emptySet()
                 manualStringIndex.value = null
             }
@@ -227,7 +216,8 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAutoDetectString(value: Boolean) = viewModelScope.launch {
         repository.setAutoDetectString(value)
-        if (value) manualStringIndex.value = null
+        // Going manual needs a string to sit on; going automatic releases it.
+        manualStringIndex.value = if (value) null else manualStringIndex.value ?: 0
     }
 
     fun setKeepScreenOn(value: Boolean) = viewModelScope.launch { repository.setKeepScreenOn(value) }
@@ -281,40 +271,24 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
         tuning: Tuning,
         chromatic: Boolean,
         manual: Int?,
-    ): TuningReading {
-        val a4 = settings.referencePitchHz
-
-        if (chromatic) {
-            val note = Notes.nearest(pitch.frequencyHz, a4)
-            return TuningReading(
-                frequencyHz = pitch.frequencyHz,
-                targetMidi = note.midi,
-                cents = note.cents,
-                clarity = pitch.clarity,
-                levelDbfs = pitch.levelDbfs,
-                stringIndex = null,
-                inTune = abs(note.cents) <= settings.toleranceCents,
-            )
-        }
-
-        // Either the user pinned a string, or we take the one whose target is
-        // fewest cents away from what is being played.
-        val index = manual?.takeIf { it in tuning.strings.indices }
-            ?: tuning.strings.indices.minByOrNull { i ->
-                abs(Notes.centsBetween(pitch.frequencyHz, tuning.strings[i], a4))
-            }
-            ?: 0
-
-        val targetMidi = tuning.strings[index]
-        val cents = Notes.centsBetween(pitch.frequencyHz, targetMidi, a4)
-        return TuningReading(
+    ): TuningReading = if (chromatic) {
+        PitchTargeting.resolveChromatic(
             frequencyHz = pitch.frequencyHz,
-            targetMidi = targetMidi,
-            cents = cents,
             clarity = pitch.clarity,
             levelDbfs = pitch.levelDbfs,
-            stringIndex = index,
-            inTune = abs(cents) <= settings.toleranceCents,
+            a4Hz = settings.referencePitchHz,
+            toleranceCents = settings.toleranceCents,
+        )
+    } else {
+        PitchTargeting.resolveAgainstTuning(
+            frequencyHz = pitch.frequencyHz,
+            clarity = pitch.clarity,
+            levelDbfs = pitch.levelDbfs,
+            tuning = tuning,
+            a4Hz = settings.referencePitchHz,
+            toleranceCents = settings.toleranceCents,
+            manualIndex = manual,
+            autoDetect = settings.autoDetectString,
         )
     }
 
