@@ -32,6 +32,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(libs.kotlinx.serialization.json)
+            // PitchSource hands frames over as a Flow, which both platforms
+            // consume; nothing else here is asynchronous.
+            api(libs.kotlinx.coroutines.core)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

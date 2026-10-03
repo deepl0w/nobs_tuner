@@ -18,14 +18,14 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 
 /**
- * The microphone [PitchSource], capturing frames and feeding them to
+ * The microphone [MicrophonePitchSource], capturing frames and feeding them to
  * [PitchDetector].
  *
  * Collecting [pitchEstimates] opens the microphone; cancelling the collection
  * closes it. Nothing is retained between collections, so the recorder is never
  * left holding the mic while the app is backgrounded.
  */
-class AudioEngine(private val context: Context) : PitchSource {
+class AudioEngine(private val context: Context) : MicrophonePitchSource {
 
     companion object {
         /** 44.1 kHz is supported on every Android device; higher rates are not. */

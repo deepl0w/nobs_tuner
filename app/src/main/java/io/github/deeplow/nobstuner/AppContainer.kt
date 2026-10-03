@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewmodel.CreationExtras
 import io.github.deeplow.nobstuner.audio.AudioEngine
-import io.github.deeplow.nobstuner.audio.PitchSource
+import io.github.deeplow.nobstuner.audio.MicrophonePitchSource
 import io.github.deeplow.nobstuner.data.DataStoreTunerRepository
 import io.github.deeplow.nobstuner.data.TunerRepository
 
@@ -24,7 +24,7 @@ class AppContainer(context: Context) {
     /** Both are stateless and safe to share; the mic is opened per collection. */
     val repository: TunerRepository by lazy { DataStoreTunerRepository(appContext) }
 
-    val pitchSource: PitchSource by lazy { AudioEngine(appContext) }
+    val pitchSource: MicrophonePitchSource by lazy { AudioEngine(appContext) }
 }
 
 /** Reaches the container from inside a `viewModelFactory { initializer { ... } }`. */

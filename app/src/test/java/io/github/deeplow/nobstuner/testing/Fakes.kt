@@ -1,7 +1,7 @@
 package io.github.deeplow.nobstuner.testing
 
 import io.github.deeplow.nobstuner.audio.PitchEstimate
-import io.github.deeplow.nobstuner.audio.PitchSource
+import io.github.deeplow.nobstuner.audio.MicrophonePitchSource
 import io.github.deeplow.nobstuner.data.DisplayStyle
 import io.github.deeplow.nobstuner.data.ThemeMode
 import io.github.deeplow.nobstuner.data.TunerRepository
@@ -122,7 +122,7 @@ class FakeTunerRepository(
 }
 
 /**
- * A [PitchSource] fed by the test rather than by a microphone.
+ * A [MicrophonePitchSource] fed by the test rather than by a microphone.
  *
  * This is the seam that makes the listening state machine testable at all: an
  * emulator cannot be handed host audio, so without it none of these paths could
@@ -132,7 +132,7 @@ class FakePitchSource(
     var permissionGranted: Boolean = true,
     /** When set, collecting the flow fails with this instead of emitting. */
     var failWith: Throwable? = null,
-) : PitchSource {
+) : MicrophonePitchSource {
 
     private val frames = MutableSharedFlow<PitchEstimate>(extraBufferCapacity = 64)
 

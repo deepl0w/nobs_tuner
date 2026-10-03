@@ -7,7 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.deeplow.nobstuner.appContainer
 import io.github.deeplow.nobstuner.audio.PitchSmoother
-import io.github.deeplow.nobstuner.audio.PitchSource
+import io.github.deeplow.nobstuner.audio.MicrophonePitchSource
 import io.github.deeplow.nobstuner.audio.TrackedPitch
 import io.github.deeplow.nobstuner.data.TunerRepository
 import io.github.deeplow.nobstuner.data.UserSettings
@@ -55,7 +55,7 @@ data class TunerUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class TunerViewModel(
     private val repository: TunerRepository,
-    private val pitchSource: PitchSource,
+    private val pitchSource: MicrophonePitchSource,
     private val smoother: PitchSmoother = PitchSmoother(),
 ) : ViewModel() {
 
