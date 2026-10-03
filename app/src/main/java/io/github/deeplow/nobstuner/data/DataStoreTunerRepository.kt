@@ -75,7 +75,7 @@ class DataStoreTunerRepository internal constructor(
         val defaults = UserSettings()
         UserSettings(
             referencePitchHz = prefs[Keys.referencePitch]
-                ?.coerceIn(UserSettings.REFERENCE_PITCH_RANGE)
+                ?.let(UserSettings::clampReferencePitch)
                 ?: defaults.referencePitchHz,
             useFlats = prefs[Keys.useFlats] ?: defaults.useFlats,
             autoDetectString = prefs[Keys.autoDetectString] ?: defaults.autoDetectString,
@@ -84,7 +84,7 @@ class DataStoreTunerRepository internal constructor(
                 ?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } }
                 ?: defaults.themeMode,
             toleranceCents = prefs[Keys.toleranceCents]
-                ?.coerceIn(UserSettings.TOLERANCE_RANGE)
+                ?.let(UserSettings::clampToleranceCents)
                 ?: defaults.toleranceCents,
             displayStyle = prefs[Keys.displayStyle]
                 ?.let { name -> DisplayStyle.entries.firstOrNull { it.name == name } }
@@ -111,7 +111,7 @@ class DataStoreTunerRepository internal constructor(
     // ---- Settings writes -------------------------------------------------
 
     override suspend fun setReferencePitch(hz: Double) = edit {
-        it[Keys.referencePitch] = hz.coerceIn(UserSettings.REFERENCE_PITCH_RANGE)
+        it[Keys.referencePitch] = UserSettings.clampReferencePitch(hz)
     }
 
     override suspend fun setUseFlats(value: Boolean) = edit { it[Keys.useFlats] = value }
@@ -124,7 +124,7 @@ class DataStoreTunerRepository internal constructor(
     override suspend fun setThemeMode(mode: ThemeMode) = edit { it[Keys.themeMode] = mode.name }
 
     override suspend fun setToleranceCents(cents: Int) = edit {
-        it[Keys.toleranceCents] = cents.coerceIn(UserSettings.TOLERANCE_RANGE)
+        it[Keys.toleranceCents] = UserSettings.clampToleranceCents(cents)
     }
 
     override suspend fun setDisplayStyle(style: DisplayStyle) = edit {

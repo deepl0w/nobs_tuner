@@ -68,7 +68,9 @@ class FakeTunerRepository(
     val currentChromatic: Boolean get() = chromaticState.value
 
     override suspend fun setReferencePitch(hz: Double) {
-        settingsState.value = settingsState.value.copy(referencePitchHz = hz)
+        settingsState.value = settingsState.value.copy(
+            referencePitchHz = UserSettings.clampReferencePitch(hz),
+        )
     }
 
     override suspend fun setUseFlats(value: Boolean) {
@@ -88,7 +90,9 @@ class FakeTunerRepository(
     }
 
     override suspend fun setToleranceCents(cents: Int) {
-        settingsState.value = settingsState.value.copy(toleranceCents = cents)
+        settingsState.value = settingsState.value.copy(
+            toleranceCents = UserSettings.clampToleranceCents(cents),
+        )
     }
 
     override suspend fun setDisplayStyle(style: DisplayStyle) {

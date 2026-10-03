@@ -50,6 +50,7 @@ import io.github.deeplow.nobstuner.model.Notes
 import io.github.deeplow.nobstuner.ui.TunerUiState
 import io.github.deeplow.nobstuner.ui.components.HintText
 import io.github.deeplow.nobstuner.ui.components.chromaticIconRes
+import io.github.deeplow.nobstuner.ui.components.stringSelectorHint
 import io.github.deeplow.nobstuner.ui.components.iconRes
 import io.github.deeplow.nobstuner.ui.components.NoteReadout
 import io.github.deeplow.nobstuner.ui.components.StringSelector
@@ -353,14 +354,10 @@ private fun Strings(
     )
     Spacer(Modifier.height(10.dp))
     HintText(
-        text = when {
-            // With automatic detection off the player is always aiming at one
-            // string, so offering to hand back to detection would be a lie.
-            !state.settings.autoDetectString -> "Tap the string you are tuning."
-            state.manualStringIndex != null ->
-                "Listening for one string. Tap it again for automatic detection."
-            else -> "Tap a string to lock onto it."
-        },
+        text = stringSelectorHint(
+            autoDetect = state.settings.autoDetectString,
+            pinnedIndex = state.manualStringIndex,
+        ),
     )
 }
 

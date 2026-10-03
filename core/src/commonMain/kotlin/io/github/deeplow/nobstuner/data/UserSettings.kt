@@ -33,5 +33,16 @@ data class UserSettings(
     companion object {
         val REFERENCE_PITCH_RANGE = 415.0..466.0
         val TOLERANCE_RANGE = 1..15
+
+        /**
+         * Both values are clamped where they enter the app, so nothing
+         * downstream has to defend against a slider that overshot or a stored
+         * value from an older build. Every [TunerRepository] applies these —
+         * including the test fake, which is otherwise free to let through a
+         * value the real app can never produce.
+         */
+        fun clampReferencePitch(hz: Double): Double = hz.coerceIn(REFERENCE_PITCH_RANGE)
+
+        fun clampToleranceCents(cents: Int): Int = cents.coerceIn(TOLERANCE_RANGE)
     }
 }

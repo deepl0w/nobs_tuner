@@ -168,6 +168,41 @@ private fun FrequencyChip(label: String, hz: Double?) {
 }
 
 /**
+ * What the selector tells the player to do.
+ *
+ * Kept out of the composable so the mapping from state to words can be tested:
+ * the wrong line here is a silent defect — it reads fine on screen and tells
+ * the player something untrue about what the tuner is doing.
+ */
+internal fun stringSelectorHint(autoDetect: Boolean, pinnedIndex: Int?): String = when {
+    // With automatic detection off the player is always aiming at one string,
+    // so offering to hand back to detection would be a lie.
+    !autoDetect -> "Tap the string you are tuning."
+    pinnedIndex != null -> "Listening for one string. Tap it again for automatic detection."
+    else -> "Tap a string to lock onto it."
+}
+
+/**
+ * What a screen reader announces for one string chip.
+ *
+ * This is the only description of the chip a player using TalkBack ever gets —
+ * the note name and octave are drawn as separate [Text]s that would otherwise
+ * be read as unrelated fragments — so it has to carry the string number, the
+ * note, and both states.
+ */
+internal fun stringChipDescription(
+    stringNumber: Int,
+    noteName: String,
+    octave: Int,
+    isTuned: Boolean,
+    isPinned: Boolean,
+): String = buildString {
+    append("String $stringNumber, $noteName$octave")
+    if (isTuned) append(", tuned")
+    if (isPinned) append(", selected")
+}
+
+/**
  * One chip per string. Tapping pins the tuner to that string; tapping the
  * pinned one releases it back to automatic detection.
  */
@@ -284,11 +319,13 @@ private fun StringChip(
                 shape = CircleShape,
             )
             .semantics {
-                contentDescription = buildString {
-                    append("String $stringNumber, $label$octave")
-                    if (isTuned) append(", tuned")
-                    if (isPinned) append(", selected")
-                }
+                contentDescription = stringChipDescription(
+                    stringNumber = stringNumber,
+                    noteName = label,
+                    octave = octave,
+                    isTuned = isTuned,
+                    isPinned = isPinned,
+                )
             },
     ) {
         Box(contentAlignment = Alignment.Center) {
