@@ -1,11 +1,11 @@
 package io.github.deeplow.nobstuner.audio
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import kotlin.math.abs
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PitchSmootherTest {
 
@@ -26,7 +26,7 @@ class PitchSmootherTest {
         assertNull(smoother.push(good(440.0)))
         val tracked = smoother.push(good(440.0))
         assertNotNull(tracked)
-        assertEquals(440.0, tracked!!.frequencyHz, 1e-9)
+        assertEquals(440.0, tracked.frequencyHz, 1e-9)
     }
 
     @Test
@@ -39,7 +39,7 @@ class PitchSmootherTest {
         assertNull(smoother.push(good(233.1)))
         val tracked = smoother.push(good(233.1))
         assertNotNull(tracked)
-        assertEquals(233.1, tracked!!.frequencyHz, 2.0)
+        assertEquals(233.1, tracked.frequencyHz, 2.0)
     }
 
     @Test
@@ -64,8 +64,8 @@ class PitchSmootherTest {
         repeat(4) {
             tracked = smoother.push(PitchEstimate(329.63, clarity = 1.0, levelDbfs = -59.0))
         }
-        assertNotNull("a -59 dBFS note over a -85 dBFS room should register", tracked)
-        assertEquals(329.63, tracked!!.frequencyHz, 0.5)
+        assertNotNull(tracked, "a -59 dBFS note over a -85 dBFS room should register")
+        assertEquals(329.63, tracked.frequencyHz, 0.5)
     }
 
     @Test
@@ -96,8 +96,8 @@ class PitchSmootherTest {
         val tracked = smoother.push(good(440.0))
         assertNotNull(tracked)
         assertTrue(
-            "outlier pulled the reading to ${tracked!!.frequencyHz}",
             abs(tracked.frequencyHz - 220.0) < 5.0,
+            "outlier pulled the reading to ${tracked.frequencyHz}",
         )
     }
 
@@ -161,9 +161,9 @@ class PitchSmootherTest {
 
         val plucksHeard = detected.distinct()
         assertEquals(
-            "only plucks $plucksHeard registered out of six",
             listOf(0, 1, 2, 3, 4, 5),
             plucksHeard,
+            "only plucks $plucksHeard registered out of six",
         )
     }
 }

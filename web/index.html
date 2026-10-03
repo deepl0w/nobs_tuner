@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover so the dial can use the full height of a notched phone;
+     the safe-area insets are added back in CSS. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nobs Tuner</title>
+<meta name="description" content="A chromatic and preset-based tuner for guitar, bass, ukulele, banjo, mandolin and orchestral strings. Everything happens on your device.">
+<meta name="color-scheme" content="light dark">
+<!-- Replaced at runtime to match the resolved theme; this is the dark value
+     because a standalone launch most often lands on a dark splash. -->
+<meta name="theme-color" content="#15130E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nobs Tuner">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<noscript>
+  <p class="noscript">Nobs Tuner analyses sound in your browser, so it needs JavaScript to run.</p>
+</noscript>
+
+<div id="app" aria-busy="true"></div>
+
+<!-- Announces the note and how far off it is, for screen readers that cannot
+     see the dial. Throttled in main.js so it does not speak every frame. -->
+<p id="live-reading" class="visually-hidden" role="status" aria-live="polite"></p>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,19 +1,19 @@
 package io.github.deeplow.nobstuner.audio
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
-import org.junit.Test
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class FftTest {
 
     @Test
     fun `rejects non power of two sizes`() {
-        assertThrows(IllegalArgumentException::class.java) { Fft(100) }
-        assertThrows(IllegalArgumentException::class.java) { Fft(1) }
+        assertFailsWith<IllegalArgumentException> { Fft(100) }
+        assertFailsWith<IllegalArgumentException> { Fft(1) }
     }
 
     @Test
@@ -30,8 +30,8 @@ class FftTest {
         Fft(n).forward(actualRe, actualIm)
 
         for (k in 0 until n) {
-            assertEquals("re[$k]", expectedRe[k], actualRe[k], 1e-9)
-            assertEquals("im[$k]", expectedIm[k], actualIm[k], 1e-9)
+            assertEquals(expectedRe[k], actualRe[k], 1e-9, "re[$k]")
+            assertEquals(expectedIm[k], actualIm[k], 1e-9, "im[$k]")
         }
     }
 
@@ -46,7 +46,7 @@ class FftTest {
         for (k in 0 until n) {
             val magnitude = kotlin.math.hypot(re[k], im[k])
             val expected = if (k == bin || k == n - bin) n / 2.0 else 0.0
-            assertEquals("bin $k", expected, magnitude, 1e-8)
+            assertEquals(expected, magnitude, 1e-8, "bin $k")
         }
     }
 

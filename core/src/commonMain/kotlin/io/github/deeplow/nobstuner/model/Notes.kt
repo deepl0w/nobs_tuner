@@ -59,11 +59,11 @@ object Notes {
     /** Pitch-class name, e.g. "F#" or "Gb" depending on [useFlats]. */
     fun pitchClassName(midi: Int, useFlats: Boolean = false): String {
         val names = if (useFlats) FLAT_NAMES else SHARP_NAMES
-        return names[Math.floorMod(midi, 12)]
+        return names[midi.mod(12)]
     }
 
     /** Scientific pitch octave; MIDI 60 is C4. */
-    fun octaveOf(midi: Int): Int = Math.floorDiv(midi, 12) - 1
+    fun octaveOf(midi: Int): Int = midi.floorDiv(12) - 1
 
     /** Full scientific name, e.g. "A4" or "Eb3". */
     fun name(midi: Int, useFlats: Boolean = false): String =

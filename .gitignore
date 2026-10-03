@@ -19,7 +19,10 @@ captures/
 .DS_Store
 
 # Downloaded test recordings (see tools/fetch-test-audio.sh)
-app/src/test/resources/realaudio/
+core/src/jvmTest/resources/realaudio/
 
 # Claude Code session state
 .claude/
+
+# Compiled Kotlin core for the web app; produced by `./gradlew :core:syncWebCore`.
+web/vendor/

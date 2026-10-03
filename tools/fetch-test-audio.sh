@@ -12,7 +12,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEST="$ROOT/app/src/test/resources/realaudio"
+DEST="$ROOT/core/src/jvmTest/resources/realaudio"
 BASE="https://theremin.music.uiowa.edu/sound%20files/MIS"
 
 if ! command -v ffmpeg >/dev/null; then

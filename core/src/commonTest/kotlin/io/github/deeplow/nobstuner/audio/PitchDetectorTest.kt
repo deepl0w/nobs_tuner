@@ -1,15 +1,18 @@
 package io.github.deeplow.nobstuner.audio
 
 import io.github.deeplow.nobstuner.model.Notes
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.ln
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 private const val SAMPLE_RATE = 44_100
 private const val FRAME = 8192
@@ -42,11 +45,11 @@ class PitchDetectorTest {
     private fun assertDetects(expectedHz: Double, samples: FloatArray, toleranceCents: Double) {
         val estimate = detector().analyse(samples)
         val detected = estimate.frequencyHz
-        assertNotNull("no pitch detected for $expectedHz Hz", detected)
-        val cents = 1200.0 * (Math.log(detected!! / expectedHz) / Math.log(2.0))
+        assertNotNull(detected, "no pitch detected for $expectedHz Hz")
+        val cents = 1200.0 * (ln(detected / expectedHz) / ln(2.0))
         assertTrue(
-            "expected $expectedHz Hz, got $detected Hz (${"%.2f".format(cents)} cents off)",
             abs(cents) <= toleranceCents,
+            "expected $expectedHz Hz, got $detected Hz ($cents cents off)",
         )
     }
 
@@ -113,7 +116,7 @@ class PitchDetectorTest {
     @Test
     fun `resolves pitches between the semitones`() {
         // A string 30 cents flat of A2 must read as 30 cents flat, not snap to A2.
-        val target = Notes.frequencyOf(45) * Math.pow(2.0, -30.0 / 1200.0)
+        val target = Notes.frequencyOf(45) * 2.0.pow(-30.0 / 1200.0)
         assertDetects(target, tone(target, harmonics = 6), 2.0)
     }
 
@@ -140,8 +143,8 @@ class PitchDetectorTest {
         val estimate = detector().analyse(samples)
         // Either nothing is found, or whatever is found is flagged as unreliable.
         assertTrue(
-            "noise reported as a confident pitch: $estimate",
             estimate.frequencyHz == null || estimate.clarity < 0.76,
+            "noise reported as a confident pitch: $estimate",
         )
     }
 
@@ -156,7 +159,7 @@ class PitchDetectorTest {
     @Test
     fun `clarity is high for a clean tone`() {
         val estimate = detector().analyse(tone(196.0, harmonics = 5))
-        assertTrue("clarity was ${estimate.clarity}", estimate.clarity > 0.9)
+        assertTrue(estimate.clarity > 0.9, "clarity was ${estimate.clarity}")
     }
 
     @Test
@@ -166,13 +169,13 @@ class PitchDetectorTest {
             val f0 = Notes.frequencyOf(midi)
             val detected = detector.analyse(tone(f0, harmonics = 6)).frequencyHz
             assertNotNull(detected)
-            assertEquals(f0, detected!!, f0 * 0.002)
+            assertEquals(f0, detected, f0 * 0.002)
         }
     }
 
     @Test
     fun `rejects frames that are too short`() {
-        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             detector().analyse(FloatArray(FRAME - 1))
         }
     }
@@ -181,7 +184,7 @@ class PitchDetectorTest {
     fun `rejects a frame size that cannot hold the frequency range`() {
         // The integration window is half the frame, so a 16-sample frame leaves
         // room for lags up to 7 — below the shortest lag the range implies.
-        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             PitchDetector(SAMPLE_RATE, frameSize = 16)
         }
         // A frame only has to span the range it is asked for, not the default one.
@@ -190,7 +193,7 @@ class PitchDetectorTest {
 
     @Test
     fun `rejects a non power of two frame size`() {
-        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+        assertFailsWith<IllegalArgumentException> {
             PitchDetector(SAMPLE_RATE, frameSize = 3000)
         }
     }
@@ -210,8 +213,8 @@ class PitchDetectorTest {
 
         val tooLow = detector.analyse(tone(60.0, harmonics = 4)).frequencyHz
         assertTrue(
-            "60 Hz should not be reported by a 200-1000 Hz detector, got $tooLow",
             tooLow == null || tooLow >= 190.0,
+            "60 Hz should not be reported by a 200-1000 Hz detector, got $tooLow",
         )
     }
 }

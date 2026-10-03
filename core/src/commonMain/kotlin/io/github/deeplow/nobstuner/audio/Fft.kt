@@ -28,9 +28,15 @@ class Fft(val size: Int) {
             cosTable[i] = cos(angle)
             sinTable[i] = sin(angle)
         }
-        val bits = Integer.numberOfTrailingZeros(size)
+        val bits = size.countTrailingZeroBits()
         for (i in 0 until size) {
-            bitReverse[i] = Integer.reverse(i) ushr (32 - bits)
+            var remaining = i
+            var reversed = 0
+            repeat(bits) {
+                reversed = (reversed shl 1) or (remaining and 1)
+                remaining = remaining ushr 1
+            }
+            bitReverse[i] = reversed
         }
     }
 

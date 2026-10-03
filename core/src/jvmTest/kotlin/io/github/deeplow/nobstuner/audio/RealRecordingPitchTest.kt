@@ -49,14 +49,14 @@ class RealRecordingPitchTest {
     private data class HeldNote(val midi: Int, val centsSpread: List<Double>)
 
     /**
-     * Streams [samples] exactly as [AudioEngine] does and returns the notes that
+     * Streams [samples] exactly as the live microphone feed does and returns the notes that
      * stayed put long enough to be worth showing a user, in the order heard.
      */
     private fun notesHeard(samples: FloatArray, sampleRate: Int): List<HeldNote> {
-        val detector = PitchDetector(sampleRate, AudioEngine.FRAME_SIZE)
+        val detector = PitchDetector(sampleRate, Analysis.FRAME_SIZE)
         val smoother = PitchSmoother()
         val highPass = HighPassFilter(sampleRate)
-        val window = FloatArray(AudioEngine.FRAME_SIZE)
+        val window = FloatArray(Analysis.FRAME_SIZE)
 
         val held = mutableListOf<HeldNote>()
         var currentMidi: Int? = null
@@ -74,18 +74,18 @@ class RealRecordingPitchTest {
         }
 
         var offset = 0
-        while (offset + AudioEngine.HOP_SIZE <= samples.size) {
-            System.arraycopy(window, AudioEngine.HOP_SIZE, window, 0, AudioEngine.FRAME_SIZE - AudioEngine.HOP_SIZE)
+        while (offset + Analysis.HOP_SIZE <= samples.size) {
+            System.arraycopy(window, Analysis.HOP_SIZE, window, 0, Analysis.FRAME_SIZE - Analysis.HOP_SIZE)
             System.arraycopy(
                 samples, offset, window,
-                AudioEngine.FRAME_SIZE - AudioEngine.HOP_SIZE, AudioEngine.HOP_SIZE,
+                Analysis.FRAME_SIZE - Analysis.HOP_SIZE, Analysis.HOP_SIZE,
             )
             highPass.processInPlace(
                 window,
-                AudioEngine.FRAME_SIZE - AudioEngine.HOP_SIZE,
-                AudioEngine.HOP_SIZE,
+                Analysis.FRAME_SIZE - Analysis.HOP_SIZE,
+                Analysis.HOP_SIZE,
             )
-            offset += AudioEngine.HOP_SIZE
+            offset += Analysis.HOP_SIZE
 
             val tracked = smoother.push(detector.analyse(window))
             if (tracked == null) {

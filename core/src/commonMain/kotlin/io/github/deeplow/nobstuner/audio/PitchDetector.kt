@@ -111,12 +111,12 @@ class PitchDetector(
 
     /** Fills [difference] with d(τ) for τ in 0 until [windowSize]. */
     private fun computeDifference() {
-        java.util.Arrays.fill(aIm, 0.0)
-        java.util.Arrays.fill(bIm, 0.0)
+        aIm.fill(0.0)
+        bIm.fill(0.0)
         // a = first half of the frame, zero-padded; b = the whole frame.
-        System.arraycopy(centred, 0, bRe, 0, frameSize)
-        java.util.Arrays.fill(aRe, 0.0)
-        System.arraycopy(centred, 0, aRe, 0, windowSize)
+        centred.copyInto(bRe, destinationOffset = 0, startIndex = 0, endIndex = frameSize)
+        aRe.fill(0.0)
+        centred.copyInto(aRe, destinationOffset = 0, startIndex = 0, endIndex = windowSize)
 
         fft.forward(aRe, aIm)
         fft.forward(bRe, bIm)

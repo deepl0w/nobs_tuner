@@ -1,10 +1,11 @@
 package io.github.deeplow.nobstuner.model
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import kotlin.math.abs
+import kotlin.math.ln
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NotesTest {
 
@@ -56,7 +57,7 @@ class NotesTest {
         val slightlySharp = Notes.frequencyOf(64) * 1.01
         val reading = Notes.nearest(slightlySharp)
         assertEquals(64, reading.midi)
-        assertTrue("expected a sharp reading, got ${reading.cents}", reading.cents > 0)
+        assertTrue(reading.cents > 0, "expected a sharp reading, got ${reading.cents}")
 
         // Exactly between two notes the reading must still land on one of them.
         val between = Notes.frequencyOf(64.5)
@@ -97,7 +98,7 @@ class NotesTest {
     fun `reference pitch shifts every note together`() {
         val a442 = 442.0
         // Raising the reference by ~7.85 cents raises every note by the same amount.
-        val expectedCents = 1200.0 * (Math.log(a442 / 440.0) / Math.log(2.0))
+        val expectedCents = 1200.0 * (ln(a442 / 440.0) / ln(2.0))
         for (midi in intArrayOf(28, 40, 60, 76)) {
             val shifted = Notes.frequencyOf(midi, a442)
             assertEquals(expectedCents, Notes.centsBetween(shifted, midi), 1e-9)

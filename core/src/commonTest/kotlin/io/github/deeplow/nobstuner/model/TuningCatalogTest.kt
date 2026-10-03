@@ -1,9 +1,10 @@
 package io.github.deeplow.nobstuner.model
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
 
 class TuningCatalogTest {
 
@@ -11,22 +12,22 @@ class TuningCatalogTest {
     fun `ids are unique`() {
         val ids = TuningCatalog.presets.map { it.id }
         assertEquals(
-            "duplicate preset ids: ${ids.groupBy { it }.filterValues { it.size > 1 }.keys}",
             ids.size,
             ids.toSet().size,
+            "duplicate preset ids: ${ids.groupBy { it }.filterValues { it.size > 1 }.keys}",
         )
     }
 
     @Test
     fun `every preset is playable`() {
         TuningCatalog.presets.forEach { tuning ->
-            assertTrue("${tuning.id} has no strings", tuning.strings.isNotEmpty())
-            assertTrue("${tuning.id} has too many strings", tuning.strings.size <= 12)
-            assertTrue("${tuning.id} has a blank name", tuning.name.isNotBlank())
+            assertTrue(tuning.strings.isNotEmpty(), "${tuning.id} has no strings")
+            assertTrue(tuning.strings.size <= 12, "${tuning.id} has too many strings")
+            assertTrue(tuning.name.isNotBlank(), "${tuning.id} has a blank name")
             tuning.strings.forEach { midi ->
                 assertTrue(
-                    "${tuning.id} has out-of-range note $midi",
                     midi in Notes.MIN_MIDI..Notes.MAX_MIDI,
+                    "${tuning.id} has out-of-range note $midi",
                 )
             }
         }
@@ -77,7 +78,7 @@ class TuningCatalogTest {
     @Test
     fun `every family has at least one preset`() {
         InstrumentFamily.entries.forEach { family ->
-            assertTrue("$family has no presets", TuningCatalog.byFamily(family).isNotEmpty())
+            assertTrue(TuningCatalog.byFamily(family).isNotEmpty(), "$family has no presets")
         }
     }
 
