@@ -39,6 +39,11 @@ jobs:
       - name: Lint
         run: ./gradlew :app:lintRelease
 
+      # The ADRs link to the source they are about, so moving a file turns them
+      # into 404s that nobody notices until a reader follows one.
+      - name: Check documentation links
+        run: tools/check-doc-links.py
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4

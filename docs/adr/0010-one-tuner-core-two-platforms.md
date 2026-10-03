@@ -8,6 +8,11 @@ downstream of the microphone is plain Kotlin" is what made this possible, and
 carries the seam from [0009](0009-interfaces-for-the-seams-that-tests-need.md)
 across the platform boundary. Enables [0011](0011-a-web-tuner-alongside-the-app.md).
 
+**Narrows [0004](0004-8192-sample-frames-at-44-1-khz.md)**, whose sample rate was
+chosen on the grounds that 44.1 kHz is the one rate every Android device
+supports. That argument does not reach a browser, which does not offer the
+choice at all — see *The rate we do not choose* below.
+
 ## Context
 
 A browser tuner ([0011](0011-a-web-tuner-alongside-the-app.md)) needs the same
@@ -62,12 +67,33 @@ because it decodes WAV files with `javax.sound`.
 
 **On 0008's single-declaration rule.** That record requires the recording tests
 to reference the engine's frame constants rather than copies, so the test cannot
-drift from the engine. That property is preserved but has moved: the one
-declaration is now `Analysis.FRAME_SIZE` / `Analysis.HOP_SIZE` in
-`commonMain`, and `AudioEngine.FRAME_SIZE` is defined *as* `Analysis.FRAME_SIZE`.
-Do not read `AudioEngine` as the source of truth — it is an alias, and the web
-pipeline reads the same declaration, so 0004's frame geometry is now shared by
-every platform rather than merely copied correctly.
+drift from the engine. The property is preserved, but the mechanism has
+**inverted**, and a reader of 0008 needs to know that before going looking.
+
+0008 has the test referencing the engine. That is no longer possible in either
+direction it describes: `core/src/jvmTest/` cannot depend on `app`, so the test
+cannot see `AudioEngine` at all. Instead both now reference a third thing —
+`Analysis.FRAME_SIZE` and `Analysis.HOP_SIZE` in `commonMain` are the single
+declaration, and `AudioEngine.FRAME_SIZE` is defined *as* `Analysis.FRAME_SIZE`.
+The guarantee is the same and slightly stronger, because the web pipeline reads
+that declaration too, but **`AudioEngine` is now an alias and not the source of
+truth**, and anyone following 0008's wording to it will land in the wrong file.
+
+**On the source links in 0001, 0002, 0003 and 0008.** This move left five of
+them pointing at `app/src/.../audio/`, which no longer exists. Their link
+*targets* have been repointed at the files' new homes — and nothing else in those
+records was touched, which the diff shows: one path string each.
+
+That is a judgement about what "append-only" protects. The rule exists so a
+record's reasoning cannot be quietly revised after the fact, and a path is not
+reasoning: it is a pointer to code that was always free to move. Leaving five
+404s in the log to honour a rule about arguments would make the log less useful
+without making it more honest. If the fleet reads the rule more strictly than
+that, reverting the commit that did it restores the broken links exactly.
+
+`.github/workflows/android.yml` now fails the build on a broken relative link in
+any Markdown file, so the next move that does this says so at the time rather
+than leaving it for a reader to discover.
 
 ### Crossing into JavaScript
 
@@ -81,6 +107,58 @@ The catalog crosses as JSON. It is built by hand rather than with
 kotlinx.serialization because pulling that library into the browser bundle to
 emit four fixed strings at start-up cost over 200 KB — most of the download, for
 something a dozen lines of string building do.
+
+## The rate we do not choose
+
+[0004](0004-8192-sample-frames-at-44-1-khz.md) fixes `FRAME_SIZE` at 8192,
+`HOP_SIZE` at 2048 and the sample rate at 44 100, the last because it is the one
+rate every Android device supports. A browser does not take requests: it hands
+over whatever `AudioContext.sampleRate` says its hardware runs at — 48 kHz on
+most machines — and asking for anything else makes it resample, which is a worse
+starting point than analysing what the hardware actually produced.
+
+Frame and hop stay fixed in **samples**, so at 48 kHz every window counted in
+frames is 8.13% shorter in **time**:
+
+| | 44.1 kHz | 48 kHz |
+|---|---|---|
+| Hop | 46.44 ms | 42.67 ms |
+| Integration window | 92.88 ms | 85.33 ms |
+| …as periods of B0 (30.87 Hz) | 2.87 | 2.63 |
+| Onset agreement (3 frames) | 139 ms | 128 ms |
+| Level trend (9 frames) | 418 ms | 384 ms |
+| Release (10 frames) | 464 ms | 427 ms |
+| Octave-fold limit (12 frames) | 557 ms | 512 ms |
+| Noise-floor window (110 frames) | 5.11 s | 4.69 s |
+
+**The frequency-domain requirement still holds, and is now checked.** 0004 asks
+for an integration window comfortably longer than one period of the lowest note;
+2.63 periods of B0 clears that. `PitchDetectorTest.detects the same notes at the
+rate a browser runs at` runs the detector at 48 kHz across the range from B0 to
+E5, and B0 — the worst case — comes back 0.0007 cents off. That test runs on
+both compilations, so the claim is not platform hearsay.
+
+**The time-domain constants are a different matter, and this is the honest
+part.** The thresholds in [0002](0002-gate-notes-on-ratios-not-absolute-levels.md)
+and [0003](0003-a-fading-note-is-one-still-falling.md) are counted in frames but
+*justified* in units of time — how long to wait before believing a new note, how
+long a level has to keep falling before a note counts as dying. They were
+measured at 44.1 kHz. Nobody has measured them at 48. The direction of the shift
+is the reassuring one — every window gets shorter, so the web tuner is quicker to
+believe a new note and quicker to let go of a dead one, rather than slower — but
+"the direction looks safe" is an argument, not a measurement.
+
+It is compounded by where the measurements come from.
+`Analysis.PREFERRED_SAMPLE_RATE` is also the rate `tools/fetch-test-audio.sh`
+resamples the fixtures to, so [0008](0008-verify-pitch-tracking-off-device.md)'s
+recording suite — the one that found four of the five defects that record lists —
+verifies the chain at precisely the rate the web path never runs at. Synthesised
+tones at 48 kHz are covered; real instruments at 48 kHz are not.
+
+This is recorded as a known gap rather than fixed, because closing it means
+either resampling the corpus twice, which doubles a multi-gigabyte download, or
+accepting that a resampled 48 kHz fixture is not the same evidence as a 48 kHz
+recording. Neither is obviously right, and neither should be decided in passing.
 
 ## Consequences
 
@@ -135,3 +213,11 @@ anything new crossing the boundary deserves the same suspicion.
   golden vectors to pin it to this one.
 - **A third platform appears.** iOS would be a `native` target and mostly free;
   that is the case where this decision pays for itself twice.
+- **A pitch defect is reported from a browser and not from the Android app**, or
+  the reverse. The first thing to suspect is the sample rate: that is the one
+  axis on which the two genuinely differ, and the gap named above — real
+  recordings verified only at 44.1 kHz — is where the evidence runs out.
+- **Any of 0002's or 0003's frame counts are retuned.** They are measured in
+  frames and argued in milliseconds, and there are now two rates at which a
+  frame means something different. Retuning one without saying which rate it was
+  measured at would leave the other platform carrying a number nobody checked.

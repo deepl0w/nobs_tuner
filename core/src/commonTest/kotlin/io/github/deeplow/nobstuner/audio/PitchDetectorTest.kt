@@ -42,6 +42,40 @@ class PitchDetectorTest {
         }
     }
 
+    /** A tone at an arbitrary sample rate, for checking a rate we do not choose. */
+    private fun toneAt(rate: Int, frequency: Double, harmonics: Int = 5): FloatArray =
+        FloatArray(FRAME) { i ->
+            var value = 0.0
+            for (h in 1..harmonics) value += (1.0 / h) * sin(2.0 * PI * frequency * h * i / rate)
+            (value * 0.4).toFloat()
+        }
+
+    @Test
+    fun `detects the same notes at the rate a browser runs at`() {
+        // Android opens the microphone at 44.1 kHz and the recordings in the
+        // regression suite are resampled to it, so without this nothing
+        // exercises the rate the web app actually gets. A browser hands over
+        // whatever its hardware runs at — 48 kHz on most machines — and will
+        // not be argued with.
+        //
+        // Frame and hop are fixed in samples, so the integration window is
+        // shorter there: 85 ms against 93, which is 2.6 periods of B0 rather
+        // than 2.9. ADR 0004 asks for comfortably more than one period, and
+        // this is the check that 48 kHz still clears it, B0 included.
+        val rate = 48_000
+        val detector = PitchDetector(rate, FRAME)
+        intArrayOf(23, 28, 40, 45, 50, 55, 59, 64, 76).forEach { midi ->
+            val expected = Notes.frequencyOf(midi)
+            val detected = detector.analyse(toneAt(rate, expected)).frequencyHz
+            assertNotNull(detected, "no pitch detected for ${Notes.name(midi)} at $rate Hz")
+            val cents = 1200.0 * (ln(detected / expected) / ln(2.0))
+            assertTrue(
+                abs(cents) <= 2.0,
+                "${Notes.name(midi)} at $rate Hz read $cents cents off",
+            )
+        }
+    }
+
     private fun assertDetects(expectedHz: Double, samples: FloatArray, toleranceCents: Double) {
         val estimate = detector().analyse(samples)
         val detected = estimate.frequencyHz
