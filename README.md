@@ -128,6 +128,13 @@ the ID is permanent once published.
 
 ## Licence
 
-The code in this repository is yours to licence as you wish. The test recordings
-downloaded by `tools/fetch-test-audio.sh` belong to the University of Iowa
-Electronic Music Studios and are not redistributed here.
+[MIT](LICENSE) — © 2026 Dennis Plosceanu.
+
+The instrument recordings fetched by `tools/fetch-test-audio.sh` are **not**
+covered by it. They belong to the University of Iowa Electronic Music Studios,
+are downloaded on demand, and are not redistributed in this repository.
+
+## Architecture decisions
+
+The decisions behind the pitch detection, the gating, the persistence and the
+privacy posture are recorded in [docs/adr/](docs/adr/).

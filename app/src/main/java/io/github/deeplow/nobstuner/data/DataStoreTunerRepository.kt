@@ -16,6 +16,7 @@ import io.github.deeplow.nobstuner.model.Tuning
 import io.github.deeplow.nobstuner.model.TuningCatalog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import java.io.IOException
@@ -28,10 +29,21 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
  * Custom tunings are stored as a JSON blob in one preference key rather than in
  * a database. There are tens of them at most, they are always read and written
  * whole, and this keeps the app free of a schema to migrate.
+ *
+ * Every exposed flow drops repeats. DataStore republishes the whole preference
+ * snapshot on each write, so without that a change to, say, the tolerance would
+ * re-emit from all of them and anything downstream would treat it as news —
+ * which is what used to clear the tuned-string ticks and unpin the selected
+ * string whenever an unrelated setting changed.
+ *
+ * The store is injected so the mapping can be tested against a real DataStore
+ * on a temporary file; [TunerRepositoryTest] does exactly that.
  */
-class DataStoreTunerRepository(context: Context) : TunerRepository {
+class DataStoreTunerRepository internal constructor(
+    private val dataStore: DataStore<Preferences>,
+) : TunerRepository {
 
-    private val dataStore = context.applicationContext.dataStore
+    constructor(context: Context) : this(context.applicationContext.dataStore)
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -78,23 +90,23 @@ class DataStoreTunerRepository(context: Context) : TunerRepository {
                 ?.let { name -> DisplayStyle.entries.firstOrNull { it.name == name } }
                 ?: defaults.displayStyle,
         )
-    }
+    }.distinctUntilChanged()
 
     override val customTunings: Flow<List<Tuning>> = preferences.map { prefs ->
         decodeCustomTunings(prefs[Keys.customTunings])
-    }
+    }.distinctUntilChanged()
 
     override val favoriteIds: Flow<Set<String>> = preferences.map { prefs ->
         prefs[Keys.favorites] ?: emptySet()
-    }
+    }.distinctUntilChanged()
 
     override val selectedTuningId: Flow<String> = preferences.map { prefs ->
         prefs[Keys.selectedTuning] ?: TuningCatalog.default.id
-    }
+    }.distinctUntilChanged()
 
     override val chromaticMode: Flow<Boolean> = preferences.map { prefs ->
         prefs[Keys.chromaticMode] ?: false
-    }
+    }.distinctUntilChanged()
 
     // ---- Settings writes -------------------------------------------------
 

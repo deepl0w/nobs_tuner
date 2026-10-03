@@ -11,9 +11,10 @@ import io.github.deeplow.nobstuner.audio.PitchSource
 import io.github.deeplow.nobstuner.audio.TrackedPitch
 import io.github.deeplow.nobstuner.data.TunerRepository
 import io.github.deeplow.nobstuner.data.UserSettings
+import io.github.deeplow.nobstuner.model.PitchTargeting
 import io.github.deeplow.nobstuner.model.Tuning
 import io.github.deeplow.nobstuner.model.TuningCatalog
-import io.github.deeplow.nobstuner.model.TuningResolver
+import io.github.deeplow.nobstuner.model.TuningReading
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,18 +31,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-/** The live pitch resolved against whatever the tuner is currently aiming at. */
-data class TuningReading(
-    val frequencyHz: Double,
-    val targetMidi: Int,
-    val cents: Double,
-    val clarity: Double,
-    val levelDbfs: Double,
-    /** Index into [Tuning.strings], or null in chromatic mode. */
-    val stringIndex: Int?,
-    val inTune: Boolean,
-)
 
 data class TunerUiState(
     val settings: UserSettings = UserSettings(),
@@ -165,9 +154,9 @@ class TunerViewModel(
             chromaticMode = target.chromatic,
             reading = reading,
             isFavorite = target.tuning.id in session.favorites,
-            manualStringIndex = TuningResolver.effectivePinnedIndex(
-                pinnedStringIndex = pin?.indexFor(target),
-                autoDetectString = settings.autoDetectString,
+            manualStringIndex = PitchTargeting.effectivePinnedIndex(
+                manualIndex = pin?.indexFor(target),
+                autoDetect = settings.autoDetectString,
                 chromatic = target.chromatic,
                 tuning = target.tuning,
             ),
@@ -242,24 +231,24 @@ class TunerViewModel(
         settings: UserSettings,
         target: Target,
         pin: StringPin?,
-    ): TuningReading {
-        val resolved = TuningResolver.resolve(
+    ): TuningReading = if (target.chromatic) {
+        PitchTargeting.resolveChromatic(
             frequencyHz = pitch.frequencyHz,
-            tuning = target.tuning,
-            chromatic = target.chromatic,
-            pinnedStringIndex = pin?.indexFor(target),
-            autoDetectString = settings.autoDetectString,
-            referencePitchHz = settings.referencePitchHz,
-            toleranceCents = settings.toleranceCents,
-        )
-        return TuningReading(
-            frequencyHz = pitch.frequencyHz,
-            targetMidi = resolved.targetMidi,
-            cents = resolved.cents,
             clarity = pitch.clarity,
             levelDbfs = pitch.levelDbfs,
-            stringIndex = resolved.stringIndex,
-            inTune = resolved.inTune,
+            a4Hz = settings.referencePitchHz,
+            toleranceCents = settings.toleranceCents,
+        )
+    } else {
+        PitchTargeting.resolveAgainstTuning(
+            frequencyHz = pitch.frequencyHz,
+            clarity = pitch.clarity,
+            levelDbfs = pitch.levelDbfs,
+            tuning = target.tuning,
+            a4Hz = settings.referencePitchHz,
+            toleranceCents = settings.toleranceCents,
+            manualIndex = pin?.indexFor(target),
+            autoDetect = settings.autoDetectString,
         )
     }
 

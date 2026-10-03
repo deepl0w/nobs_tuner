@@ -49,7 +49,8 @@ class PitchSmoother(
     private var silentFrames = 0
     private var lastClarity = 0.0
     private var octaveFoldFrames = 0
-    private var peakLevelDbfs = -120.0
+    /** Levels of the last few frames, used to tell a fading note from a new one. */
+    private val recentLevels = ArrayDeque<Double>()
 
     /**
      * Levels of recent frames that held no discernible pitch. The quietest of
@@ -63,13 +64,15 @@ class PitchSmoother(
         silentFrames = 0
         lastClarity = 0.0
         octaveFoldFrames = 0
-        peakLevelDbfs = -120.0
+        recentLevels.clear()
         // The room does not change because the tuner stopped listening, so the
         // learned floor deliberately survives a reset.
     }
 
     fun push(estimate: PitchEstimate): TrackedPitch? {
         rememberLevel(estimate)
+        recentLevels.addLast(estimate.levelDbfs)
+        if (recentLevels.size > TREND_FRAMES) recentLevels.removeFirst()
         val frequency = estimate.frequencyHz
         val usable = frequency != null &&
             frequency > 0.0 &&
@@ -91,8 +94,6 @@ class PitchSmoother(
 
         silentFrames = 0
         lastClarity = estimate.clarity
-
-        peakLevelDbfs = maxOf(peakLevelDbfs, estimate.levelDbfs)
 
         // Resolve the octave before touching the history, so the check for a
         // settled lock sees the full window rather than one short of it.
@@ -132,14 +133,28 @@ class PitchSmoother(
     }
 
     /**
-     * Only aperiodic frames teach the floor. A note held steady — a bowed
+     * Only aperiodic frames with no note in flight teach the floor. A note held steady — a bowed
      * string, a sustaining pickup — sits at a near-constant level for seconds,
      * and a floor that watched every frame would decide that level *was* the
      * room and stop hearing the note. Periodicity is what separates the two,
      * and unlike level it does not depend on the gain of the input.
      */
+    /** True while the level has dropped meaningfully across the recent window. */
+    private fun levelIsFalling(): Boolean {
+        if (recentLevels.size < TREND_FRAMES) return false
+        return recentLevels.last() < recentLevels.first() - FALL_MARGIN_DB
+    }
+
     private fun rememberLevel(estimate: PitchEstimate) {
         if (estimate.frequencyHz != null && estimate.clarity >= minClarity) return
+        // Aperiodic is not the same as "no note sounding". The attack of a
+        // pluck is pick noise and string slap — aperiodic, and louder than the
+        // note it introduces — and the tail turns aperiodic while it is still
+        // clearly audible. Both arrive while a note is being tracked, and a
+        // floor that learns from them climbs towards the attacks until it sits
+        // above the note itself and the tuner goes deaf mid-session. Only
+        // frames with no note in flight at all describe the room.
+        if (smoothedLogHz != null) return
         levelWindow.addLast(estimate.levelDbfs)
         if (levelWindow.size > LEVEL_WINDOW) levelWindow.removeFirst()
     }
@@ -199,10 +214,17 @@ class PitchSmoother(
             octaveFoldFrames = 0
             return logHz
         }
-        // A note that is dying away cannot be the player moving up an octave:
-        // a real new note arrives with an attack, not 12 dB below the one before
-        // it. While the level is this far down, the jump is always an artifact.
-        val decaying = levelDbfs < peakLevelDbfs - DECAY_MARGIN_DB
+        // A note that is still dying away cannot be the player moving up an
+        // octave, so while the level is falling the jump is always an artifact.
+        //
+        // What matters is that the level is falling *now*, not that it is below
+        // some earlier peak. Comparing against the loudest level since the last
+        // release looks equivalent and is not: pluck a low string hard and then
+        // a higher one gently and the quiet note reads as the loud one decaying
+        // for as long as it is held, so the escape below never fires and the
+        // display sits an octave under the string being played. A note that is
+        // genuinely fading keeps getting quieter; a new, quieter note settles.
+        val decaying = levelIsFalling()
         if (!decaying && octaveFoldFrames >= OCTAVE_FOLD_LIMIT) {
             // Persistent: the player really has moved up an octave. Re-lock
             // outright, because a history full of folded values would otherwise
@@ -226,8 +248,11 @@ class PitchSmoother(
         /** Consecutive folds before a persistent octave change is believed. */
         const val OCTAVE_FOLD_LIMIT = 12
 
-        /** How far below the note's own peak counts as "decaying", in dB. */
-        const val DECAY_MARGIN_DB = 12.0
+        /** Frames spanned when deciding whether the level is still falling. */
+        const val TREND_FRAMES = 9
+
+        /** Drop across that span that counts as a note still fading, in dB. */
+        const val FALL_MARGIN_DB = 2.0
 
         /** Frames that must agree before a new note is believed. */
         const val ONSET_FRAMES = 3

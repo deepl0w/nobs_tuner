@@ -1,9 +1,12 @@
 # Architecture
 
-How Nobs Tuner is put together, and why. For what the app does, see the
-[README](../README.md); for the signal processing itself, see the comments in
-`PitchDetector` and `PitchSmoother`, which carry the measurements behind their
-constants.
+How Nobs Tuner is put together. This describes the shape the code is in; the
+*decisions*, with the arguments and the measurements behind them, live in
+[docs/adr](adr/) and are append-only. Where a decision is recorded there, this
+document links to it rather than restating the case — if the two ever disagree,
+the ADR is right.
+
+For what the app does, see the [README](../README.md).
 
 ## The shape of it
 
@@ -28,7 +31,7 @@ Four layers. Dependencies only ever point downwards — nothing in `model/` or
                    │                   │
           ┌────────▼───────────────────▼──────────────────┐
   model/  │  Notes   Tuning   TuningCatalog               │  pure Kotlin
-          │  TuningResolver                               │
+          │  PitchTargeting                               │
           └───────────────────────────────────────────────┘
 ```
 
@@ -48,16 +51,20 @@ PitchDetector       YIN via FFT        → PitchEstimate(hz?, clarity, level)
    ▼
 PitchSmoother       gate, median, ease → TrackedPitch(hz, clarity, level)
    ▼
-TuningResolver      which string? how far off?  → TuningTarget
+PitchTargeting      which string? how far off?  → TuningTarget
    ▼
 TunerUiState        what the screen draws
 ```
 
 The first three stages are pure functions of their input plus their own stream
 state, and none of them import anything from Android. That is the whole reason
-the test suite can check the hard part on the JVM: 110 unit tests run without a
-device, including recordings of real instruments pushed through the same frame
-size, hop, filter, detector and smoother that the microphone uses.
+the suite can check the hard part on the JVM — 146 unit tests, no device — and
+it is a decision in its own right:
+[ADR 0008](adr/0008-verify-pitch-tracking-off-device.md). The frame size and hop
+are [ADR 0004](adr/0004-8192-sample-frames-at-44-1-khz.md); the detector itself
+is [ADR 0001](adr/0001-yin-with-an-fft-difference-function.md) and the gating
+[0002](adr/0002-gate-notes-on-ratios-not-absolute-levels.md) and
+[0003](adr/0003-a-fading-note-is-one-still-falling.md).
 
 ## Decisions worth knowing
 
@@ -79,16 +86,14 @@ chromatic mode. The three view models read and write only through it, which is
 why the library screen and the tuner screen can never disagree about which
 tuning is selected — there is only one copy of that fact.
 
-**Custom tunings are one JSON blob, not a database.** There are tens of them at
-most and they are always read and written whole, so a Room schema would be
-overhead with migrations attached. They live in a single DataStore preference
-key.
+**Custom tunings are one JSON blob, not a database**, in a single DataStore
+preference key — [ADR 0005](adr/0005-datastore-and-json-not-room.md).
 
 **Preset ids are permanent.** `TuningCatalog` ids end up persisted in the
 favourites set and as the selected tuning, so renaming one orphans a user's
 data. Change `Tuning.name` instead; the id is not shown anywhere.
 
-**Aiming is a pure function.** `TuningResolver` decides which note a reading is
+**Aiming is a pure function.** `PitchTargeting` decides which note a reading is
 measured against — the pinned string, else the nearest string, else, when
 automatic detection is switched off, the first one. It takes its inputs as
 arguments and returns a value, so the rule that governs what the needle points
@@ -138,10 +143,11 @@ clear it.
 ## Dependencies and seams
 
 `AppContainer` is the composition root — the one place that decides which
-concrete implementations exist. It is hand-written: the graph is two objects
-deep and does not branch, so a DI framework would cost more to read than it
-saves. What matters is not the mechanism but that construction happens there and
-not inside the view models.
+concrete implementations exist
+([ADR 0009](adr/0009-interfaces-for-the-seams-that-tests-need.md)). It is
+hand-written: the graph is two objects deep and does not branch, so a DI
+framework would cost more to read than it saves. What matters is not the
+mechanism but that construction happens there and not inside the view models.
 
 Two interfaces exist purely as seams:
 
@@ -163,8 +169,10 @@ Two interfaces exist purely as seams:
 | device | `AudioEngineInstrumentedTest`, `AudioSourceProbeTest` |
 
 The recording tests skip unless the fixtures are present; `./test.sh --audio`
-fetches them. Instrumented tests cover what only a real device can answer —
-that the recorder opens, and which audio source the hardware actually gives us.
+fetches them. Why that suite exists in the form it does is
+[ADR 0008](adr/0008-verify-pitch-tracking-off-device.md). Instrumented tests
+cover what only a real device can answer — that the recorder opens, and which
+audio source the hardware actually gives us.
 They deliberately do not test pitch accuracy, because an emulator's microphone
 cannot be fed a known signal; that is what the recording tests are for.
 
@@ -177,7 +185,7 @@ app/src/main/java/io/github/deeplow/nobstuner/
 ├── MainActivity.kt              sets the Compose content
 ├── audio/                       PitchSource, AudioEngine, detector, smoother, FFT, filter
 ├── data/                        TunerRepository + DataStore implementation, UserSettings
-├── model/                       Notes, Tuning, TuningCatalog, TuningResolver
+├── model/                       Notes, Tuning, TuningCatalog, PitchTargeting
 └── ui/
     ├── NobsTunerApp.kt          navigation and view-model wiring
     ├── *ViewModel.kt            tuner, library, settings
@@ -199,4 +207,4 @@ app/src/main/java/io/github/deeplow/nobstuner/
   actually reads it: a setting that is persisted and displayed but never
   consulted looks exactly like a working one.
 - **Anything touching what the needle points at** — it belongs in
-  `TuningResolver`, where it can be tested without a view model.
+  `PitchTargeting`, where it can be tested without a view model.

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
  * Every view model reads and writes through this interface, so two screens
  * observing the same fact always agree. [DataStoreTunerRepository] is the real
  * implementation; the interface exists so view models can be tested against an
- * in-memory fake instead of a DataStore on a device.
+ * in-memory fake rather than a DataStore on disk.
  */
 interface TunerRepository {
 
