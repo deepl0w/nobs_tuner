@@ -27,6 +27,10 @@ report what they found back to main — including finding nothing — and main
 integrates at the end. The cycle is in the `fleet` skill under *The review
 cycle*.
 
+ADR numbers are claimed with `.claude/scripts/fleet.sh adr-claim "<title>"`,
+never by agreeing one in a message — it allocates against every number that
+exists on any branch or in any worktree, including uncommitted drafts.
+
 `.claude/scripts/fleet.sh brief` prints where you are and where your branch
 stands — the SessionStart hook runs it for you. The protocol in full, including
 what each role may change, is in `.claude/skills/fleet/SKILL.md`; commands are

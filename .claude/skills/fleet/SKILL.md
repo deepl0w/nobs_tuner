@@ -93,6 +93,26 @@ at the end. The order is deliberate: review first against a synced tree, merge
 afterwards, so main is merging work that has already been read by someone other
 than its author.
 
+## ADR numbers
+
+```bash
+.claude/scripts/fleet.sh adr-claim "Ship a PWA alongside the Android app"
+```
+
+Claim before you write, never after, and never by agreeing a number in a
+message. The script allocates against every number that exists anywhere — every
+branch, every worktree's working tree including drafts nobody has committed, and
+the claims file in the main checkout — so it cannot be defeated by two agents
+reading the same state before either writes.
+
+Messages cannot do this job. A reservation and the work it was meant to protect
+can cross in flight, which is exactly how 0009 was claimed twice: main reserved
+it for one branch while another had already written and committed it. The
+collision was cheap only because the second record did not exist yet. Announce
+your claim by all means — but claim it with the script first.
+
+`fleet.sh adr-taken` lists every number in use and where it came from.
+
 ## Commits
 
 Write the message the repository already uses: a single imperative line that says
