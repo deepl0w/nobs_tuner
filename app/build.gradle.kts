@@ -135,6 +135,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    // Lets the view-model tests drive the flow graph on a virtual clock.
+    testImplementation(libs.kotlinx.coroutines.test)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
