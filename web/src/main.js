@@ -240,18 +240,17 @@ function onPitch(pitch) {
     return;
   }
 
-  const strings = state.chromaticMode ? new Int32Array(0) : Int32Array.from(currentTuning().strings);
-  const manual =
-    state.settings.autoDetectString || state.manualStringIndex === null
-      ? state.manualStringIndex ?? -1
-      : state.manualStringIndex;
+  const strings = state.chromaticMode
+    ? new Int32Array(0)
+    : Int32Array.from(currentTuning().strings);
 
   state.reading = core.resolve(
     pitch,
     strings,
     state.settings.referencePitchHz,
     state.settings.toleranceCents,
-    manual,
+    state.manualStringIndex ?? -1,
+    state.settings.autoDetectString,
   );
 
   // Strings the player has already brought into tune this session.

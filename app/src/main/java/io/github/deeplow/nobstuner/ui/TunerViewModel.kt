@@ -16,10 +16,10 @@ import io.github.deeplow.nobstuner.data.ThemeMode
 import io.github.deeplow.nobstuner.data.TunerRepository
 import io.github.deeplow.nobstuner.data.UserSettings
 import io.github.deeplow.nobstuner.model.InstrumentFamily
+import io.github.deeplow.nobstuner.model.PitchTargeting
 import io.github.deeplow.nobstuner.model.Tuning
 import io.github.deeplow.nobstuner.model.TuningCatalog
-import io.github.deeplow.nobstuner.tuner.TuningReading
-import io.github.deeplow.nobstuner.tuner.TuningResolver
+import io.github.deeplow.nobstuner.model.TuningReading
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -154,7 +155,7 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             combine(activeTuning, repository.chromaticMode) { tuning, chromatic ->
                 tuning.id to chromatic
-            }.collect {
+            }.distinctUntilChanged().collect {
                 _tunedStrings.value = emptySet()
                 manualStringIndex.value = null
             }
@@ -215,7 +216,8 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAutoDetectString(value: Boolean) = viewModelScope.launch {
         repository.setAutoDetectString(value)
-        if (value) manualStringIndex.value = null
+        // Going manual needs a string to sit on; going automatic releases it.
+        manualStringIndex.value = if (value) null else manualStringIndex.value ?: 0
     }
 
     fun setKeepScreenOn(value: Boolean) = viewModelScope.launch { repository.setKeepScreenOn(value) }
@@ -270,14 +272,23 @@ class TunerViewModel(application: Application) : AndroidViewModel(application) {
         chromatic: Boolean,
         manual: Int?,
     ): TuningReading = if (chromatic) {
-        TuningResolver.chromatic(pitch, settings.referencePitchHz, settings.toleranceCents)
-    } else {
-        TuningResolver.against(
-            pitch = pitch,
-            tuning = tuning,
-            referencePitchHz = settings.referencePitchHz,
+        PitchTargeting.resolveChromatic(
+            frequencyHz = pitch.frequencyHz,
+            clarity = pitch.clarity,
+            levelDbfs = pitch.levelDbfs,
+            a4Hz = settings.referencePitchHz,
             toleranceCents = settings.toleranceCents,
-            manualStringIndex = manual,
+        )
+    } else {
+        PitchTargeting.resolveAgainstTuning(
+            frequencyHz = pitch.frequencyHz,
+            clarity = pitch.clarity,
+            levelDbfs = pitch.levelDbfs,
+            tuning = tuning,
+            a4Hz = settings.referencePitchHz,
+            toleranceCents = settings.toleranceCents,
+            manualIndex = manual,
+            autoDetect = settings.autoDetectString,
         )
     }
 

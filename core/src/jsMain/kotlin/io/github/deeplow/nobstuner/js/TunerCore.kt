@@ -10,10 +10,10 @@ import io.github.deeplow.nobstuner.audio.PitchSmoother
 import io.github.deeplow.nobstuner.data.DisplayStyle
 import io.github.deeplow.nobstuner.data.UserSettings
 import io.github.deeplow.nobstuner.model.InstrumentFamily
+import io.github.deeplow.nobstuner.model.PitchTargeting
 import io.github.deeplow.nobstuner.model.Notes
 import io.github.deeplow.nobstuner.model.Tuning
 import io.github.deeplow.nobstuner.model.TuningCatalog
-import io.github.deeplow.nobstuner.tuner.TuningResolver
 
 /**
  * The JavaScript face of the tuner core.
@@ -99,7 +99,7 @@ class Reading internal constructor(
  * Works out which string [pitch] is aiming at and how far off it is.
  *
  * Pass an empty [strings] for chromatic mode, and -1 for [manualStringIndex] to
- * let the nearest string win.
+ * leave the choice of string to [autoDetectString].
  */
 fun resolve(
     pitch: HeardPitch,
@@ -107,21 +107,28 @@ fun resolve(
     referencePitchHz: Double,
     toleranceCents: Int,
     manualStringIndex: Int,
+    autoDetectString: Boolean,
 ): Reading {
-    val tracked = io.github.deeplow.nobstuner.audio.TrackedPitch(
-        frequencyHz = pitch.frequencyHz,
-        clarity = pitch.clarity,
-        levelDbfs = pitch.levelDbfs,
-    )
     val resolved = if (strings.isEmpty()) {
-        TuningResolver.chromatic(tracked, referencePitchHz, toleranceCents)
-    } else {
-        TuningResolver.against(
-            pitch = tracked,
-            tuning = Tuning("", "", InstrumentFamily.OTHER, strings.toList()),
-            referencePitchHz = referencePitchHz,
+        PitchTargeting.resolveChromatic(
+            frequencyHz = pitch.frequencyHz,
+            clarity = pitch.clarity,
+            levelDbfs = pitch.levelDbfs,
+            a4Hz = referencePitchHz,
             toleranceCents = toleranceCents,
-            manualStringIndex = manualStringIndex.takeIf { it >= 0 },
+        )
+    } else {
+        PitchTargeting.resolveAgainstTuning(
+            frequencyHz = pitch.frequencyHz,
+            clarity = pitch.clarity,
+            levelDbfs = pitch.levelDbfs,
+            // Only the notes matter here; the name and family belong to the
+            // JavaScript side, which holds the catalog the user picked from.
+            tuning = Tuning("", "", InstrumentFamily.OTHER, strings.toList()),
+            a4Hz = referencePitchHz,
+            toleranceCents = toleranceCents,
+            manualIndex = manualStringIndex.takeIf { it >= 0 },
+            autoDetect = autoDetectString,
         )
     }
     return Reading(
@@ -134,8 +141,6 @@ fun resolve(
         inTune = resolved.inTune,
     )
 }
-
-// ---- Note maths ----------------------------------------------------------
 
 // Equal-temperament note maths, with A4 wherever the user has put it. Flat
 // top-level functions rather than an object, because Kotlin exports an object
